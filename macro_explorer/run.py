@@ -1,0 +1,45 @@
+import argparse
+import sys
+from pathlib import Path
+import yaml
+from pypyr import pipelinerunner
+
+
+def add_run_args(parser):
+    parser.add_argument(
+        "-c",
+        "--configs_dir",
+        type=str,
+        metavar="PATH",
+        default="configs",
+        help="path to configs dir that contains settings.yaml (default: configs)",
+    )
+
+def run(args):
+    configs_dir = str(Path(args.configs_dir).resolve())
+    print(f"Running control-totals pipeline with configs in: {configs_dir}")
+
+    settings_path = Path(configs_dir) / "settings.yaml"
+    with open(settings_path) as f:
+        settings = yaml.safe_load(f) or {}
+    settings.pop("steps", None)
+
+    # Resolve dir paths relative to the project root (parent of configs dir)
+    # and ensure they exist before the pipeline runs.
+    project_root = Path(configs_dir).parent
+    for key in ("data_dir", "output_dir"):
+        if key in settings:
+            resolved = (project_root / settings[key]).resolve()
+            resolved.mkdir(parents=True, exist_ok=True)
+            settings[key] = str(resolved)
+
+    pipelinerunner.run(
+        f'{configs_dir}/settings',
+        dict_in={'configs_dir': configs_dir, **settings},
+    )
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    add_run_args(parser)
+    args = parser.parse_args()
+    sys.exit(run(args))
