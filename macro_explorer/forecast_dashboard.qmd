@@ -353,7 +353,7 @@ Plot.plot({
 ### Row {height="42%"}
 
 ```{ojs}
-//| title: Data table
+//| output: false
 pivotRows = {
   const years = Array.from(new Set(filtered.map(d => d.year))).sort((a, b) => a - b);
   const byName = new Map();
@@ -371,6 +371,7 @@ fmt = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2})
 ```
 
 ```{ojs}
+//| title: Data table
 Inputs.table(
   pivotRows.rows,
   {
