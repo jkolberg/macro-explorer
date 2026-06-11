@@ -223,24 +223,15 @@ viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", for
 ```
 
 ```{ojs}
-viewof selHistorical = Inputs.checkbox(
-  namesByType.get("Historical") ?? [],
-  {label: "Historical", value: namesByType.get("Historical") ?? []}
-)
+viewof selHistorical = persistentCheckbox("Historical")
 ```
 
 ```{ojs}
-viewof selForecast = Inputs.checkbox(
-  namesByType.get("Forecast") ?? [],
-  {label: "Forecast", value: namesByType.get("Forecast") ?? []}
-)
+viewof selForecast = persistentCheckbox("Forecast")
 ```
 
 ```{ojs}
-viewof selGrowthTarget = Inputs.checkbox(
-  namesByType.get("Growth Target") ?? [],
-  {label: "Growth Target", value: namesByType.get("Growth Target") ?? []}
-)
+viewof selGrowthTarget = persistentCheckbox("Growth Target")
 ```
 
 <!-- Hidden helper definitions (no cards). -->
@@ -248,6 +239,30 @@ viewof selGrowthTarget = Inputs.checkbox(
 ```{ojs}
 //| output: false
 allData = transpose(data)
+```
+
+```{ojs}
+//| output: false
+// Persistent store of each name's checked state, surviving checkbox
+// recreation when geography/metric (and thus namesByType) change. Defined
+// once; mutating its contents does not trigger reactivity.
+selStore = new Map()
+```
+
+```{ojs}
+//| output: false
+// Builds a checkbox for a given type that restores its checked state from
+// selStore (names default to on) and writes changes back to selStore.
+persistentCheckbox = function (type) {
+  const names = namesByType.get(type) ?? [];
+  const checked = names.filter(n => selStore.get(n) !== false);
+  const input = Inputs.checkbox(names, {label: type, value: checked});
+  input.addEventListener("input", () => {
+    const set = new Set(input.value);
+    for (const n of names) selStore.set(n, set.has(n));
+  });
+  return input;
+}
 ```
 
 ```{ojs}
