@@ -17,7 +17,7 @@ def add_run_args(parser):
 
 def run(args):
     configs_dir = str(Path(args.configs_dir).resolve())
-    print(f"Running control-totals pipeline with configs in: {configs_dir}")
+    print(f"Running pipeline with configs in: {configs_dir}")
 
     settings_path = Path(configs_dir) / "settings.yaml"
     with open(settings_path) as f:

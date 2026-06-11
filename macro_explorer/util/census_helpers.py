@@ -75,6 +75,23 @@ class CensusApi:
         df.rename(columns={'NAME': 'name'}, inplace=True)
         df = df[['geoid', 'name'] + list(variables_dict.keys())]
         return df
+    
+    def get_acs_data(self, variables_dict, year, geog, dataset, county_ids, state_id):
+        """
+        Takes in a dictionary of variables and returns ACS data in a dataframe.
+        """
+        in_predicates = self.create_in_predicates(geog, county_ids, state_id)
+        for_predicates = f'{geog}:*'
+        dataset_url = f'acs/{dataset}'
+        start_vars = ['GEO_ID', 'NAME']
+        variables = [i for j in variables_dict.values() for i in j]
+        variables = start_vars + variables
+        df = self.get_table(variables, year, for_predicates, in_predicates, dataset_url)
+        df = self.combine_groups(variables_dict, df)
+        df = self.create_geoid(geog, df)
+        df.rename(columns={'NAME': 'name'}, inplace=True)
+        df = df[['geoid', 'name'] + list(variables_dict.keys())]
+        return df
 
     def create_geoid(self, geog, df):
         geog_slices = {

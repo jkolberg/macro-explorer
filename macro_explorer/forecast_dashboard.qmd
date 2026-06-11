@@ -1,0 +1,385 @@
+---
+title: "Forecast Explorer"
+format:
+  dashboard:
+    embed-resources: true
+    theme: cosmo
+    output-file: index.html
+---
+
+```{python}
+#| output: false
+import os
+import yaml
+import pandas as pd
+
+from macro_explorer.util.census_helpers import CensusApi  # noqa: F401  (kept for parity with notebook env)
+from macro_explorer.steps.get_remi_hh_units import load_remi_pop
+
+cfg = yaml.safe_load(open("configs/settings.yaml"))
+
+COUNTY_MAP = cfg["county_map"]                       # name -> id
+ID_TO_COUNTY = {v: k for k, v in COUNTY_MAP.items()}  # id -> name
+COUNTY_IDS = list(cfg["county_ids"])
+N_COUNTIES = len(COUNTY_IDS)
+
+# Metrics exposed in the dashboard. Additive metrics can be summed for the
+# region; ratio metrics are recomputed from summed components.
+ADDITIVE_METRICS = ["total_pop", "units", "hh", "hhpop", "gq"]
+METRICS = ["total_pop", "units", "hh", "hhpop", "hhsz", "gq"]
+
+
+# --- Data preparation (ported from forecast_explorer.ipynb) -----------------
+
+def clean_growth_targets(cfg):
+    df_out = pd.DataFrame()
+    for target in cfg["growth_targets"]:
+        target_baseyear = target["base_year"]
+        target_year = target["target_year"]
+        base_type = target["base_type"]
+        df = pd.read_csv(os.path.join(cfg["data_dir"], target["filename"]))
+        df = (
+            df.groupby("county_id")[
+                [
+                    f"{base_type}_units",
+                    f"units_{target_year}",
+                    f"{base_type}_total_pop",
+                    f"total_pop_{target_year}",
+                ]
+            ]
+            .sum()
+            .round(0)
+            .astype(int)
+        )
+        df = df.rename(
+            columns={
+                f"{base_type}_units": f"units_{target_baseyear}",
+                f"{base_type}_total_pop": f"total_pop_{target_baseyear}",
+            }
+        )
+        df = (
+            pd.wide_to_long(
+                df.reset_index(),
+                stubnames=["units", "total_pop"],
+                i="county_id",
+                j="year",
+                sep="_",
+            )
+            .sort_index()
+            .reset_index()
+        )
+        df["units"] = df["units"].replace(0, float("nan"))
+        df["name"] = target["name"]
+        df_out = pd.concat([df_out, df], ignore_index=True)
+    return df_out
+
+
+def clean_ofm(cfg, file_path, ofm_type):
+    ofm_types = {"total_pop": "Population", "units": "Housing Units"}
+    skip_rows = {"total_pop": 4, "units": 3}
+    col_filter = {"total_pop": None, "units": "Total Housing Units"}
+    df = pd.read_excel(file_path, skiprows=skip_rows[ofm_type], sheet_name=ofm_types[ofm_type])
+    df["county_id"] = df["Jurisdiction"].map(cfg["county_map"])
+    df = df.loc[df["county_id"].notna()].copy()
+    flt = col_filter[ofm_type]
+    value_cols = [c for c in df.columns if c[:4].isdigit() and (flt is None or flt in c)]
+    df = df.rename(columns={c: c[:4] for c in value_cols})
+    year_cols = [str(y) for y in range(2020, 2026)]
+    ofm = df[["county_id"] + year_cols].melt(id_vars="county_id", var_name="year", value_name=ofm_type)
+    return ofm
+
+
+def clean_pep(cfg, file_path, pep_type):
+    df = pd.read_excel(file_path, skiprows=2, header=[0, 1])
+    year_cols = [str(y) for y in range(2020, 2026)]
+    df.columns = ["geog", "april2020"] + year_cols
+    df["county_id"] = df["geog"].str.lstrip(".").str.split(",").str[0].map(cfg["county_map"])
+    df = df.loc[df["county_id"].notna()].copy().set_index("county_id")
+    return df[year_cols].reset_index().melt(id_vars="county_id", var_name="year", value_name=pep_type)
+
+
+# Growth targets
+growth_targets = clean_growth_targets(cfg)
+growth_targets["type"] = "Growth Target"
+
+# REMI history
+remi_hist = (
+    load_remi_pop(f"{cfg['data_dir']}/{cfg['remi_history_file']}", cfg["county_map"])
+    .groupby(["year", "county_id"], as_index=False)[["total_pop"]]
+    .sum()
+    .astype("int")
+    .assign(name="REMI History", type="Historical")
+)
+
+# OFM (population + housing)
+ofm_pop = clean_ofm(cfg, os.path.join(cfg["data_dir"], cfg["ofm_population_file"]), "total_pop")
+ofm_housing = clean_ofm(cfg, os.path.join(cfg["data_dir"], cfg["ofm_housing_file"]), "units")
+ofm = ofm_pop.merge(ofm_housing, on=["county_id", "year"])
+ofm["year"] = ofm["year"].astype(int)
+ofm["name"] = "OFM"
+ofm["type"] = "Historical"
+
+# PEP (population + housing)
+pep_pop = clean_pep(cfg, os.path.join(cfg["data_dir"], cfg["pep_population_file"]), "total_pop")
+pep_housing = clean_pep(cfg, os.path.join(cfg["data_dir"], cfg["pep_housing_file"]), "units")
+pep = pep_pop.merge(pep_housing, on=["county_id", "year"])
+pep["year"] = pep["year"].astype(int)
+pep["name"] = "PEP"
+pep["type"] = "Historical"
+
+# ACS
+acs = pd.read_csv(os.path.join(cfg["data_dir"], "acs_county_totals.csv"))
+acs["name"] = "ACS"
+acs_occ = (
+    acs.sort_values("year", ascending=False)
+    .drop_duplicates("county_id")
+    .set_index("county_id")["occupancy"]
+)
+acs["type"] = "Historical"
+
+# Decennial
+dec = pd.read_csv(f"{cfg['data_dir']}/decennial_totals.csv")
+dec["name"] = "Decennial"
+dec["type"] = "Historical"
+
+# REMI forecasts
+remi = pd.read_csv(f"{cfg['data_dir']}/{cfg['remi_output_file']}").query('year > @cfg["remi_base_year"]')
+remi["occupancy"] = remi["county_id"].map(acs_occ)
+remi["units"] = (remi["hh"] / remi["occupancy"]).round(0).astype(int)
+remi["hhsz"] = remi["hhpop"] / remi["hh"]
+remi["type"] = "Forecast"
+
+df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets], ignore_index=True)
+
+
+# --- Build the county + region view -----------------------------------------
+
+# Restrict to the four configured counties.
+county_df = df[df["county_id"].isin(COUNTY_IDS)].copy()
+county_df["geography"] = county_df["county_id"].map(ID_TO_COUNTY)
+
+
+def build_region(county_df):
+    """Sum additive metrics across the four counties per name/type/year.
+
+    A metric is only aggregated to a region value for a source when that source
+    has complete four-county coverage in EVERY year it reports the metric. If
+    any reported year is missing one or more counties, the metric is excluded
+    from the region entirely (all-null) so partial-coverage sources such as
+    growth_targets_v2021 are never offered or shown as a misleading regional
+    total. Ratio metrics are recomputed from the summed components.
+    """
+    # Determine, per (name, metric), whether every reported year is complete.
+    region_eligible = {}
+    for name, g_name in county_df.groupby("name"):
+        for m in ADDITIVE_METRICS:
+            if m not in g_name:
+                region_eligible[(name, m)] = False
+                continue
+            reported = g_name[g_name[m].notna()]
+            if reported.empty:
+                region_eligible[(name, m)] = False
+                continue
+            counts = reported.groupby("year")["county_id"].nunique()
+            region_eligible[(name, m)] = bool((counts == N_COUNTIES).all())
+
+    rows = []
+    for (name, type_, year), g in county_df.groupby(["name", "type", "year"]):
+        row = {"name": name, "type": type_, "year": year, "geography": "Region"}
+        for m in ADDITIVE_METRICS:
+            present = g.loc[g[m].notna(), "county_id"].nunique() if m in g else 0
+            if region_eligible.get((name, m)) and present == N_COUNTIES:
+                row[m] = g[m].sum()
+            else:
+                row[m] = float("nan")
+        rows.append(row)
+    region = pd.DataFrame(rows)
+    region["hhsz"] = region["hhpop"] / region["hh"]
+    return region
+
+
+region_df = build_region(county_df)
+
+combined = pd.concat([county_df, region_df], ignore_index=True)
+
+# Keep only the columns the dashboard needs and tidy types.
+keep_cols = ["year", "geography", "name", "type"] + METRICS
+combined = combined[[c for c in keep_cols if c in combined.columns]].copy()
+combined["year"] = combined["year"].astype(int)
+combined = combined.sort_values(["geography", "type", "name", "year"]).reset_index(drop=True)
+
+# Export to Observable JS (runs client-side; data baked into the page).
+ojs_define(data=combined)
+```
+
+## {.sidebar width="320px"}
+
+```{ojs}
+viewof geography = Inputs.radio(geographies, {label: "Geography", value: "Region"})
+```
+
+```{ojs}
+viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", format: m => metricLabels[m]})
+```
+
+```{ojs}
+viewof selHistorical = Inputs.checkbox(
+  namesByType.get("Historical") ?? [],
+  {label: "Historical", value: namesByType.get("Historical") ?? []}
+)
+```
+
+```{ojs}
+viewof selForecast = Inputs.checkbox(
+  namesByType.get("Forecast") ?? [],
+  {label: "Forecast", value: namesByType.get("Forecast") ?? []}
+)
+```
+
+```{ojs}
+viewof selGrowthTarget = Inputs.checkbox(
+  namesByType.get("Growth Target") ?? [],
+  {label: "Growth Target", value: namesByType.get("Growth Target") ?? []}
+)
+```
+
+<!-- Hidden helper definitions (no cards). -->
+
+```{ojs}
+//| output: false
+allData = transpose(data)
+```
+
+```{ojs}
+//| output: false
+countyOrder = ["King County", "Kitsap County", "Pierce County", "Snohomish County"]
+```
+
+```{ojs}
+//| output: false
+geographies = ["Region"].concat(countyOrder)
+```
+
+```{ojs}
+//| output: false
+metrics = ["total_pop", "units", "hh", "hhpop", "hhsz", "gq"]
+```
+
+```{ojs}
+//| output: false
+metricLabels = {
+  return {
+    total_pop: "Total Population",
+    units: "Housing Units",
+    hh: "Households",
+    hhpop: "Household Population",
+    hhsz: "Household Size",
+    gq: "Group Quarters"
+  };
+}
+```
+
+```{ojs}
+//| output: false
+typeOrder = ["Historical", "Forecast", "Growth Target"]
+```
+
+```{ojs}
+//| output: false
+// Names that actually have data for the current geography + metric. Under
+// "Region", partial-coverage sources have null region values and so drop out.
+availNames = new Set(
+  allData
+    .filter(d => d.geography === geography && d[metric] != null)
+    .map(d => d.name)
+)
+```
+
+```{ojs}
+//| output: false
+// Available names grouped by type, preserving the configured type order.
+namesByType = {
+  const m = new Map(typeOrder.map(t => [t, []]));
+  const seen = new Set();
+  for (const d of allData) {
+    if (!availNames.has(d.name) || seen.has(d.name)) continue;
+    seen.add(d.name);
+    if (!m.has(d.type)) m.set(d.type, []);
+    m.get(d.type).push(d.name);
+  }
+  for (const arr of m.values()) arr.sort();
+  return m;
+}
+```
+
+```{ojs}
+//| output: false
+selectedNames = new Set([...selHistorical, ...selForecast, ...selGrowthTarget])
+```
+
+```{ojs}
+//| output: false
+filtered = allData.filter(d =>
+  d.geography === geography &&
+  selectedNames.has(d.name) &&
+  d[metric] != null
+)
+```
+
+## Column
+
+### Row {height="58%"}
+
+```{ojs}
+//| title: Forecast comparison
+Plot.plot({
+  marginLeft: 80,
+  marginRight: 20,
+  x: {label: "Year", tickFormat: "d"},
+  y: {label: metricLabels[metric], grid: true, nice: true},
+  color: {legend: true},
+  marks: [
+    Plot.ruleY([0], {stroke: "#ddd"}),
+    Plot.line(filtered, {x: "year", y: metric, stroke: "name", curve: "linear", strokeWidth: 1.8}),
+    Plot.dot(filtered, {x: "year", y: metric, stroke: "name", fill: "white", r: 2.2}),
+    Plot.tip(
+      filtered,
+      Plot.pointer({x: "year", y: metric, stroke: "name", channels: {name: "name", type: "type"}})
+    )
+  ]
+})
+```
+
+### Row {height="42%"}
+
+```{ojs}
+//| title: Data table
+pivotRows = {
+  const years = Array.from(new Set(filtered.map(d => d.year))).sort((a, b) => a - b);
+  const byName = new Map();
+  for (const d of filtered) {
+    if (!byName.has(d.name)) byName.set(d.name, {Name: d.name, Type: d.type});
+    byName.get(d.name)[d.year] = d[metric];
+  }
+  return {years, rows: Array.from(byName.values())};
+}
+```
+
+```{ojs}
+//| output: false
+fmt = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2})
+```
+
+```{ojs}
+Inputs.table(
+  pivotRows.rows,
+  {
+    columns: ["Name", ...pivotRows.years],
+    header: Object.fromEntries(pivotRows.years.map(y => [y, String(y)])),
+    format: Object.fromEntries(
+      pivotRows.years.map(y => [y, v => v == null ? "" : fmt.format(v)])
+    ),
+    rows: 18
+  }
+)
+```

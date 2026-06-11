@@ -2,7 +2,49 @@ census_key: CENSUS_KEY
 data_dir: data
 output_dir: output
 county_ids: [53033, 53035, 53053, 53061]
+county_map:
+  King County: 53033
+  Kitsap County: 53035
+  Pierce County: 53053
+  Snohomish County: 53061
 state_id: 53
 
+remi_forecasts:
+  - name: REMI_adj_base_to_OFM
+    filename: REMI_base_adj_to_OFM.xlsx
+  - name: OFM_v2022_High
+    filename: REMI_OFM_v2022_High.xlsx
+  - name: OFM_v2022_Low
+    filename: REMI_OFM_v2022_Low.xlsx
+  - name: OFM_v2022_Med
+    filename: REMI_OFM_v2022_Medium.xlsx
+  - name: REMI_v3.3
+    filename: REMI_v3.3.xlsx
+
+remi_output_file: REMI_forecasts_counties_summed_all_years.csv
+remi_base_year: 2023
+remi_history_file: REMI_History.xlsx
+headship_rate_year: 2020
+
+pep_population_file: co-est2025-pop-53.xlsx
+pep_housing_file: CO-EST2025-HU-53.xlsx
+
+ofm_population_file: ofm_april1_population_final.xlsx
+ofm_housing_file: ofm_april1_housing.xlsx
+
+growth_targets:
+  - name: growth_targets_v2026
+    filename: extrapolated_targets2026.csv
+    base_year: 2023
+    target_year: 2044
+    base_type: ofm
+  - name: growth_targets_v2021
+    filename: extrapolated_targets2021.csv
+    base_year: 2020
+    target_year: 2044
+    base_type: dec
+
 steps:
-  - macro_explorer.steps.get_decennial_data
+  # - macro_explorer.steps.get_decennial_data
+  - macro_explorer.steps.get_acs_data
+  - macro_explorer.steps.get_remi_hh_units
