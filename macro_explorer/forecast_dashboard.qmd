@@ -399,3 +399,20 @@ Inputs.table(
   }
 )
 ```
+### Row {height="42%"}
+```{ojs}
+//| title: Definitions
+//| Historical data:
+//| - **Decennial**: U.S. Census Bureau decennial census counts 2000, 2010 and 2020
+//| - **ACS**: U.S. Census Bureau American Community Survey 1-year estimates 2009-2024 (2020 not available)
+//| - **OFM**: WA Office of Financial Management official population and housing unit estimates 2020-2025
+//| - **PEP**: U.S. Census Bureau Population Estimates Program population and housing unit estimates 2020-2025
+//| - **REMI History**: historical population inputs to REMI economic model
+//| Forecasts:
+//| - **REMI v3.3**: Most recent REMI baseline forecast
+//| - **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2023 Population
+//| - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
+//| note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.
+//| Growth Targets:
+//| - **Growth Targets v2021**: Population Targets, only King county included housing targets
+//| - **Growth Targets v2026**: Recently updated growth targets, now all include housing targets
