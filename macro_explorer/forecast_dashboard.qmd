@@ -355,6 +355,7 @@ Plot.plot({
   y: {label: metricLabels[metric], grid: true, nice: true},
   color: {legend: true},
   marks: [
+    Plot.ruleY([200000], {stroke: "#ddd"}),
     Plot.line(filtered, {x: "year", y: metric, stroke: "name", curve: "linear", strokeWidth: 1.8}),
     Plot.dot(filtered, {x: "year", y: metric, stroke: "name", fill: "white", r: 2.2}),
     Plot.tip(
@@ -423,3 +424,4 @@ Inputs.table(
 
 - **Growth Targets v2021**: Population Targets, only King county included housing targets
 - **Growth Targets v2026**: Recently updated growth targets, now all include housing targets
+:::
