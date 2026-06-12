@@ -98,6 +98,33 @@ def clean_pep(cfg, file_path, pep_type):
     return df[year_cols].reset_index().melt(id_vars="county_id", var_name="year", value_name=pep_type)
 
 
+def clean_luvit(df, occ_rates):
+    value_cols = [c for c in df.columns if c[:4].isdigit()]
+    df["county_id"] = df["Region"].map(cfg["county_map"])
+    col_dict = {
+        "Total Population": "total_pop",
+        "Household Population": "hhpop",
+        "Households": "hh",
+    }
+    out_df = pd.DataFrame()
+    for col in col_dict.keys():
+        temp_df = (
+            df.loc[(df.county_id.notna()) & (df["Detailed Measure"] == col)]
+            .set_index("county_id")[value_cols]
+            .reset_index()
+            .melt(id_vars="county_id", var_name="year", value_name=col_dict[col])
+            .assign(**{col_dict[col]: lambda x: x[f"{col_dict[col]}"] * 1000})
+        )
+        out_df = out_df.merge(temp_df, on=["county_id", "year"], how="outer") if not out_df.empty else temp_df
+    out_df["units"] = out_df["hh"] / out_df["county_id"].map(occ_rates)
+    out_df["gq"] = out_df["total_pop"] - out_df["hhpop"]
+    out_df["hhsz"] = out_df["hhpop"] / out_df["hh"]
+    out_df["name"] = "LUVit"
+    out_df["type"] = "Forecast"
+    out_df["year"] = out_df["year"].astype(int)
+    return out_df
+
+
 # Growth targets
 growth_targets = clean_growth_targets(cfg)
 growth_targets["type"] = "Growth Target"
@@ -149,7 +176,11 @@ remi["units"] = (remi["hh"] / remi["occupancy"]).round(0).astype(int)
 remi["hhsz"] = remi["hhpop"] / remi["hh"]
 remi["type"] = "Forecast"
 
-df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets], ignore_index=True)
+# LUVIT forecast
+luvit = pd.read_csv(f"{cfg['data_dir']}/{cfg['luvit_forecast_file']}")
+luvit = clean_luvit(luvit, acs_occ)
+
+df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit], ignore_index=True)
 
 
 # --- Build the county + region view -----------------------------------------
@@ -380,6 +411,7 @@ Plot.plot({
 - **REMI v3.3**: Most recent REMI baseline forecast
 - **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2023 Population
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
+- **LUVit**: Land Use Vision forecast
 
 *Note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
 

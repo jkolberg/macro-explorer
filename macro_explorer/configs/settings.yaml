@@ -26,6 +26,8 @@ remi_base_year: 2023
 remi_history_file: REMI_History.xlsx
 headship_rate_year: 2020
 
+luvit_forecast_file: luvit.csv
+
 pep_population_file: co-est2025-pop-53.xlsx
 pep_housing_file: CO-EST2025-HU-53.xlsx
 
