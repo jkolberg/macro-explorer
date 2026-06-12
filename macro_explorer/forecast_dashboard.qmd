@@ -424,4 +424,3 @@ Inputs.table(
 
 - **Growth Targets v2021**: Population Targets, only King county included housing targets
 - **Growth Targets v2026**: Recently updated growth targets, now all include housing targets
-:::
