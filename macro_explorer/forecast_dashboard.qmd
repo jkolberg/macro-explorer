@@ -4,6 +4,7 @@ format:
   dashboard:
     embed-resources: true
     theme: cosmo
+    scrolling: true
     output-file: index.html
 ---
 
@@ -343,7 +344,7 @@ filtered = allData.filter(d =>
 
 ## Column
 
-### Row {height="50%"}
+### Row {height="60%"}
 
 ```{ojs}
 //| title: Forecast comparison
@@ -354,7 +355,7 @@ Plot.plot({
   y: {label: metricLabels[metric], grid: true, nice: true},
   color: {legend: true},
   marks: [
-    Plot.ruleY([0], {stroke: "#ddd"}),
+    Plot.ruleY([200000], {stroke: "#ddd"}),
     Plot.line(filtered, {x: "year", y: metric, stroke: "name", curve: "linear", strokeWidth: 1.8}),
     Plot.dot(filtered, {x: "year", y: metric, stroke: "name", fill: "white", r: 2.2}),
     Plot.tip(
@@ -365,7 +366,7 @@ Plot.plot({
 })
 ```
 
-### Row {height="32%"}
+### Row {height="40%"}
 
 ```{ojs}
 //| output: false
@@ -399,9 +400,10 @@ Inputs.table(
   }
 )
 ```
-### Row {height="18%"}
+### Row {.flow}
 
-::: {.card title="Definitions"}
+#### Definitions
+
 **Historical data:**
 
 - **Decennial**: U.S. Census Bureau decennial census counts 2000, 2010 and 2020
@@ -416,10 +418,9 @@ Inputs.table(
 - **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2023 Population
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
 
-*Note: REMI forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
+*Note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
 
 **Growth Targets:**
 
 - **Growth Targets v2021**: Population Targets, only King county included housing targets
 - **Growth Targets v2026**: Recently updated growth targets, now all include housing targets
-:::
