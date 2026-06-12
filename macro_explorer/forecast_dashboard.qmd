@@ -4,7 +4,6 @@ format:
   dashboard:
     embed-resources: true
     theme: cosmo
-    scrolling: true
     output-file: index.html
 ---
 
@@ -213,6 +212,8 @@ combined = combined.sort_values(["geography", "type", "name", "year"]).reset_ind
 ojs_define(data=combined)
 ```
 
+# Dashboard
+
 ## {.sidebar width="320px"}
 
 ```{ojs}
@@ -344,7 +345,7 @@ filtered = allData.filter(d =>
 
 ## Column
 
-### Row {height="60%"}
+### Row {height="58%"}
 
 ```{ojs}
 //| title: Forecast comparison
@@ -366,7 +367,7 @@ Plot.plot({
 })
 ```
 
-### Row {height="40%"}
+### Row {height="42%"}
 
 ```{ojs}
 //| output: false
@@ -400,9 +401,8 @@ Inputs.table(
   }
 )
 ```
-### Row {.flow}
 
-#### Definitions
+# Notes
 
 **Historical data:**
 
