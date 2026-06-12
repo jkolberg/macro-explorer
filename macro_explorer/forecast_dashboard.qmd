@@ -355,7 +355,7 @@ Plot.plot({
   y: {label: metricLabels[metric], grid: true, nice: true},
   color: {legend: true},
   marks: [
-    Plot.ruleY([200000], {stroke: "#ddd"}),
+    Plot.ruleY([0], {stroke: "#ddd"}),
     Plot.line(filtered, {x: "year", y: metric, stroke: "name", curve: "linear", strokeWidth: 1.8}),
     Plot.dot(filtered, {x: "year", y: metric, stroke: "name", fill: "white", r: 2.2}),
     Plot.tip(
