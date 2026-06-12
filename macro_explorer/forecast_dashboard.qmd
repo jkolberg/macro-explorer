@@ -345,8 +345,6 @@ filtered = allData.filter(d =>
 
 ## Column
 
-### Row {height="58%"}
-
 ```{ojs}
 //| title: Forecast comparison
 Plot.plot({
@@ -365,41 +363,6 @@ Plot.plot({
     )
   ]
 })
-```
-
-### Row {height="42%"}
-
-```{ojs}
-//| output: false
-pivotRows = {
-  const years = Array.from(new Set(filtered.map(d => d.year))).sort((a, b) => a - b);
-  const byName = new Map();
-  for (const d of filtered) {
-    if (!byName.has(d.name)) byName.set(d.name, {Name: d.name, Type: d.type});
-    byName.get(d.name)[d.year] = d[metric];
-  }
-  return {years, rows: Array.from(byName.values())};
-}
-```
-
-```{ojs}
-//| output: false
-fmt = new Intl.NumberFormat("en-US", {maximumFractionDigits: 2})
-```
-
-```{ojs}
-//| title: Data table
-Inputs.table(
-  pivotRows.rows,
-  {
-    columns: ["Name", ...pivotRows.years],
-    header: Object.fromEntries(pivotRows.years.map(y => [y, String(y)])),
-    format: Object.fromEntries(
-      pivotRows.years.map(y => [y, v => v == null ? "" : fmt.format(v)])
-    ),
-    rows: 18
-  }
-)
 ```
 
 # Notes
