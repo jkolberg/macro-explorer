@@ -25,8 +25,8 @@ N_COUNTIES = len(COUNTY_IDS)
 
 # Metrics exposed in the dashboard. Additive metrics can be summed for the
 # region; ratio metrics are recomputed from summed components.
-ADDITIVE_METRICS = ["total_pop", "units", "hh", "hhpop", "gq"]
-METRICS = ["total_pop", "units", "hh", "hhpop", "hhsz", "gq"]
+ADDITIVE_METRICS = ["total_pop", "units", "hh", "hhpop"]
+METRICS = ["total_pop", "units", "hh", "hhpop", "hhsz"]
 
 
 # --- Data preparation (ported from forecast_explorer.ipynb) -----------------
@@ -113,7 +113,7 @@ def clean_luvit(df, occ_rates):
             .set_index("county_id")[value_cols]
             .reset_index()
             .melt(id_vars="county_id", var_name="year", value_name=col_dict[col])
-            .assign(**{col_dict[col]: lambda x: x[f"{col_dict[col]}"] * 1000})
+            .assign(**{col_dict[col]: lambda x: (x[f"{col_dict[col]}"] * 1000).round(0).astype(int)})
         )
         out_df = out_df.merge(temp_df, on=["county_id", "year"], how="outer") if not out_df.empty else temp_df
     out_df["units"] = out_df["hh"] / out_df["county_id"].map(occ_rates)
@@ -310,7 +310,7 @@ geographies = ["Region"].concat(countyOrder)
 
 ```{ojs}
 //| output: false
-metrics = ["total_pop", "units", "hh", "hhpop", "hhsz", "gq"]
+metrics = ["total_pop", "units", "hh", "hhpop", "hhsz"]
 ```
 
 ```{ojs}
@@ -321,8 +321,7 @@ metricLabels = {
     units: "Housing Units",
     hh: "Households",
     hhpop: "Household Population",
-    hhsz: "Household Size",
-    gq: "Group Quarters"
+    hhsz: "Household Size"
   };
 }
 ```
