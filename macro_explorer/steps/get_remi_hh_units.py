@@ -88,6 +88,7 @@ def process_forecast(remi_path, county_map, gq_rates, headship_rates):
 
 def run_step(context):
     data_dir = context["data_dir"]
+    remi_forecast_dir = context["remi_forecast_dir"]
     county_map = context["county_map"]
     headship_year = context.get("headship_rate_year", 2020)
     remi_forecasts = context["remi_forecasts"]
@@ -113,7 +114,7 @@ def run_step(context):
             f"using {headship_year} headship rates..."
         )
         out = process_forecast(
-            f"{data_dir}/{forecast['filename']}", county_map, gq_rates, headship_rates
+            f"{remi_forecast_dir}/{forecast['filename']}", county_map, gq_rates, headship_rates
         )
         out.insert(0, "name", name)
         forecast_frames.append(out)

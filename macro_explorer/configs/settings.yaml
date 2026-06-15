@@ -9,8 +9,9 @@ county_map:
   Snohomish County: 53061
 state_id: 53
 
+remi_forecast_dir: J:/Projects/Forecasts/_Regional/2026/REMI
 remi_forecasts:
-  - name: REMI_adj_base_to_OFM
+  - name: REMI_Adj_Base_to_OFM
     filename: REMI_base_adj_to_OFM.xlsx
   - name: OFM_v2022_High
     filename: REMI_OFM_v2022_High.xlsx
@@ -20,6 +21,10 @@ remi_forecasts:
     filename: REMI_OFM_v2022_Medium.xlsx
   - name: REMI_v3.3
     filename: REMI_v3.3.xlsx
+  - name: REMI_Scenario_Zero_Intl_Mig
+    filename: REMI_v3.3_zero_intl_migration.xlsx
+  - name: REMI_Scenario_Amzn_+50%
+    filename: REMI_v3.3_amzn_grows_50_pct.xlsx
 
 remi_output_file: REMI_forecasts_counties_summed_all_years.csv
 remi_base_year: 2023
@@ -48,5 +53,6 @@ growth_targets:
 
 steps:
   # - macro_explorer.steps.get_decennial_data
-  - macro_explorer.steps.get_acs_data
-  - macro_explorer.steps.get_remi_hh_units
+  # - macro_explorer.steps.get_acs_data
+  # - macro_explorer.steps.get_remi_hh_units
+  - macro_explorer.steps.render_dashboard
