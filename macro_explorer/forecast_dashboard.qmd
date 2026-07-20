@@ -408,7 +408,7 @@ Plot.plot({
 **Forecasts:**
 
 - **REMI v3.3**: Most recent REMI baseline forecast
-- **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2023 Population
+- **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2025 Population
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
 - **LUVit**: Land Use Vision forecast
 
