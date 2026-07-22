@@ -285,7 +285,7 @@ selStore = new Map()
 ```{ojs}
 //| output: false
 // Names checked by default; all other names start unchecked.
-defaultChecked = new Set(["REMI History", "REMI_Adj_Base_to_OFM"])
+defaultChecked = new Set(["OFM", "REMI_Adj_Base_to_OFM"])
 ```
 
 ```{ojs}
