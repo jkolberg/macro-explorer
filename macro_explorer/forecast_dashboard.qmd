@@ -26,7 +26,7 @@ N_COUNTIES = len(COUNTY_IDS)
 # Metrics exposed in the dashboard. Additive metrics can be summed for the
 # region; ratio metrics are recomputed from summed components.
 ADDITIVE_METRICS = ["total_pop", "units", "hh", "hhpop"]
-METRICS = ["total_pop", "units", "hh", "hhpop", "hhsz"]
+METRICS = ["total_pop", "units", "hh", "hhpop", "hhsz", "units_change"]
 
 
 # --- Data preparation (ported from forecast_explorer.ipynb) -----------------
@@ -239,6 +239,13 @@ combined = combined[[c for c in keep_cols if c in combined.columns]].copy()
 combined["year"] = combined["year"].astype(int)
 combined = combined.sort_values(["geography", "type", "name", "year"]).reset_index(drop=True)
 
+# Change in housing units: the annual change between consecutive data points
+# for each geography/name/type series. When the underlying data is annual,
+# this is the year-over-year change; when points are spaced further apart
+# (e.g. growth targets), it becomes the average annual change over the gap.
+_grp = combined.groupby(["geography", "name", "type"], sort=False)
+combined["units_change"] = _grp["units"].diff() / _grp["year"].diff()
+
 # Export to Observable JS (runs client-side; data baked into the page).
 ojs_define(data=combined)
 ```
@@ -317,7 +324,7 @@ geographies = ["Region"].concat(countyOrder)
 
 ```{ojs}
 //| output: false
-metrics = ["total_pop", "units", "hh", "hhpop", "hhsz"]
+metrics = ["total_pop", "units", "hh", "hhpop", "hhsz", "units_change"]
 ```
 
 ```{ojs}
@@ -328,7 +335,8 @@ metricLabels = {
     units: "Housing Units",
     hh: "Households",
     hhpop: "Household Population",
-    hhsz: "Household Size"
+    hhsz: "Household Size",
+    units_change: "Change in Housing Units"
   };
 }
 ```
