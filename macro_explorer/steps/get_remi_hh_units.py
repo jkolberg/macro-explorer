@@ -6,16 +6,34 @@ import pandas as pd
 REMI_POP_SCALE = 1000
 
 
+# Aggregated 10-year age bins matching CONFIG_2020 in get_decennial_data.py.
+_AGE_BIN_EDGES = [
+    (0, 14),
+    (15, 24),
+    (25, 34),
+    (35, 44),
+    (45, 54),
+    (55, 64),
+    (65, 74),
+    (75, 84),
+]
+
+
 def _parse_age_group(category):
     """Convert a REMI category like 'Population - Ages 25-29 - All Races - Total'
-    into a 5-year bin label such as 'ages_25_29' (or 'ages_85_plus')."""
+    into an aggregated 10-year bin label such as 'ages_25_34' (or 'ages_85_plus'),
+    matching the aggregated age groups used in gq_rates.csv."""
     match = re.search(r"Ages\s+(\d+)(?:-(\d+))?(\+)?", str(category))
     if not match:
         return None
     start, end, plus = match.group(1), match.group(2), match.group(3)
     if plus:
-        return f"ages_{start}_plus"
-    return f"ages_{start}_{end}"
+        return "ages_85_plus"
+    start = int(start)
+    for lo, hi in _AGE_BIN_EDGES:
+        if lo <= start <= hi:
+            return f"ages_{lo}_{hi}"
+    return None
 
 
 def load_remi_pop(remi_path, county_map):
@@ -63,6 +81,17 @@ def calculate_hh(pop_long, headship_rates):
     return hh_by_county_year
 
 
+def _headship_rates_for_year(raw_headship_rates, year):
+    """Select the headship_rate column for a given census year and normalize
+    the age_group prefix to match gq_rates.csv / pop_long ('ages_' prefix)."""
+    rate_col = f"headship_rate_{year}"
+    headship_rates = raw_headship_rates.rename(columns={rate_col: "headship_rate"})
+    headship_rates["age_group"] = headship_rates["age_group"].str.replace(
+        r"^age_", "ages_", regex=True
+    )
+    return headship_rates[["county_id", "age_group", "headship_rate"]]
+
+
 def process_forecast(remi_path, county_map, gq_rates, headship_rates):
     """Run the full pipeline for a single REMI workbook and return a DataFrame
     of county/year totals (total_pop, hhpop, gq, hh)."""
@@ -99,19 +128,18 @@ def run_step(context):
     # 5-year group-quarters rates.
     gq_rates = pd.read_csv(f"{data_dir}/gq_rates.csv")[["county_id", "age_group", "gq_rate"]]
 
-    # 5-year headship rates; pick the requested census year column.
-    headship_rates = pd.read_csv(f"{data_dir}/headship_rates.csv")
-    rate_col = f"headship_rate_{headship_year}"
-    headship_rates = headship_rates.rename(columns={rate_col: "headship_rate"})[
-        ["county_id", "age_group", "headship_rate"]
-    ]
+    # Aggregated-bin headship rates, keyed by census year; each forecast can
+    # override the default headship_rate_year via its own config entry.
+    raw_headship_rates = pd.read_csv(f"{data_dir}/headship_rates_by_age.csv")
 
     forecast_frames = []
     for forecast in remi_forecasts:
         name = forecast["name"]
+        forecast_headship_year = forecast.get("headship_rate_year", headship_year)
+        headship_rates = _headship_rates_for_year(raw_headship_rates, forecast_headship_year)
         print(
             f"Building REMI household/units totals for {name} "
-            f"using {headship_year} headship rates..."
+            f"using {forecast_headship_year} headship rates..."
         )
         out = process_forecast(
             f"{remi_forecast_dir}/{forecast['filename']}", county_map, gq_rates, headship_rates

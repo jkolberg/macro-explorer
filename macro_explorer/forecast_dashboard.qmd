@@ -284,11 +284,18 @@ selStore = new Map()
 
 ```{ojs}
 //| output: false
+// Names checked by default; all other names start unchecked.
+defaultChecked = new Set(["REMI History", "REMI_Adj_Base_to_OFM"])
+```
+
+```{ojs}
+//| output: false
 // Builds a checkbox for a given type that restores its checked state from
-// selStore (names default to on) and writes changes back to selStore.
+// selStore (falling back to defaultChecked when not yet set) and writes
+// changes back to selStore.
 persistentCheckbox = function (type) {
   const names = namesByType.get(type) ?? [];
-  const checked = names.filter(n => selStore.get(n) !== false);
+  const checked = names.filter(n => selStore.has(n) ? selStore.get(n) : defaultChecked.has(n));
   const input = Inputs.checkbox(names, {label: type, value: checked});
   input.addEventListener("input", () => {
     const set = new Set(input.value);
