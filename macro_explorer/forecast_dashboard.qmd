@@ -143,8 +143,9 @@ def clean_woods_poole(cfg, acs_occ):
         df_out = pd.concat([df_out, wp], ignore_index=True)
     df_out["occupancy"] = df_out["county_id"].map(acs_occ)
     df_out["units"] = (df_out["hh"] / df_out["occupancy"]).round(0).astype(int)
-    df_out["name"] = "Woods & Poole"
-    df_out["type"] = "Forecast"
+    is_history = df_out["year"] <= 2025
+    df_out["name"] = is_history.map({True: "Woods & Poole History", False: "Woods & Poole"})
+    df_out["type"] = is_history.map({True: "Historical", False: "Forecast"})
     return df_out
 
 
@@ -445,6 +446,7 @@ Plot.plot({
 - **OFM**: WA Office of Financial Management official population and housing unit estimates 2020-2025
 - **PEP**: U.S. Census Bureau Population Estimates Program population and housing unit estimates 2020-2025
 - **REMI History**: historical population inputs to REMI economic model
+- **Woods & Poole History**: Woods & Poole Economics regional county-level estimates, 1969-2025
 
 **Forecasts:**
 
@@ -452,7 +454,7 @@ Plot.plot({
 - **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2025 Population
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
 - **LUVit**: Land Use Vision forecast
-- **Woods & Poole**: Woods & Poole Economics regional county-level projections
+- **Woods & Poole**: Woods & Poole Economics regional county-level projections, 2026-2060
 
 *Note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
 
