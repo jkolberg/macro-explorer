@@ -125,6 +125,29 @@ def clean_luvit(df, occ_rates):
     return out_df
 
 
+def clean_woods_poole(cfg, acs_occ):
+    wp_files = {county_id: filename for d in cfg["woods_poole_files"] for county_id, filename in d.items()}
+    row_map = {
+        "TOTAL POPULATION (in thousands)": "total_pop",
+        "TOTAL NUMBER of HOUSEHOLDS (in thousands)": "hh",
+    }
+    df_out = pd.DataFrame()
+    for county_id, filename in wp_files.items():
+        file_path = os.path.join(cfg["woods_poole_forecast_dir"], filename)
+        raw = pd.read_csv(file_path, skiprows=2, index_col=0)
+        wp = raw.loc[list(row_map.keys())].rename(index=row_map).T.reset_index().rename(columns={"index": "year"})
+        wp["year"] = wp["year"].astype(int)
+        value_cols = list(row_map.values())
+        wp[value_cols] = (wp[value_cols].astype(float) * 1000).round(0).astype(int)
+        wp["county_id"] = county_id
+        df_out = pd.concat([df_out, wp], ignore_index=True)
+    df_out["occupancy"] = df_out["county_id"].map(acs_occ)
+    df_out["units"] = (df_out["hh"] / df_out["occupancy"]).round(0).astype(int)
+    df_out["name"] = "Woods & Poole"
+    df_out["type"] = "Forecast"
+    return df_out
+
+
 # Growth targets
 growth_targets = clean_growth_targets(cfg)
 growth_targets["type"] = "Growth Target"
@@ -180,7 +203,10 @@ remi["type"] = "Forecast"
 luvit = pd.read_csv(f"{cfg['data_dir']}/{cfg['luvit_forecast_file']}")
 luvit = clean_luvit(luvit, acs_occ)
 
-df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit], ignore_index=True)
+# Woods & Poole forecast
+wp = clean_woods_poole(cfg, acs_occ)
+
+df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit, wp], ignore_index=True)
 
 
 # --- Build the county + region view -----------------------------------------
@@ -426,6 +452,7 @@ Plot.plot({
 - **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2025 Population
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
 - **LUVit**: Land Use Vision forecast
+- **Woods & Poole**: Woods & Poole Economics regional county-level projections
 
 *Note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
 

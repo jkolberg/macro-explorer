@@ -57,6 +57,13 @@ growth_targets:
     target_year: 2044
     base_type: dec
 
+woods_poole_forecast_dir: J:/Projects/Forecasts/_Regional/2026/WoodsPoole
+woods_poole_files:
+  - 53033: King2026.csv
+  - 53035: Kitsap2026.csv
+  - 53053: Pierce2026.csv
+  - 53061: Snohomish2026.csv
+
 steps:
   # - macro_explorer.steps.get_decennial_data
   # - macro_explorer.steps.get_acs_data
