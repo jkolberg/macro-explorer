@@ -85,5 +85,5 @@ woods_poole_files:
 steps:
   # - macro_explorer.steps.get_decennial_data
   # - macro_explorer.steps.get_acs_data
-  # - macro_explorer.steps.get_remi_hh_units
+  - macro_explorer.steps.get_remi_hh_units
   - macro_explorer.steps.render_dashboard
