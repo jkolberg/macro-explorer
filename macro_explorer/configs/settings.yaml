@@ -9,10 +9,28 @@ county_map:
   Snohomish County: 53061
 state_id: 53
 
+headship_rates:
+  - year: 2000
+    column_name: headship_rate_2000
+    filename: headship_rates_by_age.csv
+  - year: 2010
+    column_name: headship_rate_2010
+    filename: headship_rates_by_age.csv
+  - year: 2020
+    column_name: headship_rate_2020
+    filename: headship_rates_by_age.csv
+  - year: 2024
+    column_name: rolling_avg
+    filename: pums_1yr_headship_rates_2024_by_county.csv
+
 remi_forecast_dir: J:/Projects/Forecasts/_Regional/2026/REMI
 remi_forecasts:
-  - name: REMI_Adj_Base_to_OFM
+  - name: REMI_Adj_Base_to_OFM_2024hr
     filename: REMI_base_adj_to_OFM.xlsx
+    headship_rate_year: 2024
+  - name: REMI_Adj_Base_to_OFM_2020hr
+    filename: REMI_base_adj_to_OFM.xlsx
+    headship_rate_year: 2020
   - name: REMI_Adj_Base_to_OFM_2010hr
     filename: REMI_base_adj_to_OFM.xlsx
     headship_rate_year: 2010
@@ -67,5 +85,5 @@ woods_poole_files:
 steps:
   # - macro_explorer.steps.get_decennial_data
   # - macro_explorer.steps.get_acs_data
-  - macro_explorer.steps.get_remi_hh_units
+  # - macro_explorer.steps.get_remi_hh_units
   - macro_explorer.steps.render_dashboard

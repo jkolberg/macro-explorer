@@ -452,6 +452,8 @@ Plot.plot({
 
 - **REMI v3.3**: Most recent REMI baseline forecast
 - **REMI Base Adjusted to OFM**: REMI forecast adjusted to match OFM 2020-2025 Population
+    - 2000hr-2020hr: Household/Housing unit forecasts using 2000, 2010, and 2020 headship rates
+    - 2024hr: Household/Housing unit forecasts using PUMS 2022-2024 rolling avg. headship rates
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
 - **LUVit**: Land Use Vision forecast
 - **Woods & Poole**: Woods & Poole Economics regional county-level projections, 2026-2060

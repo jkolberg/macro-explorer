@@ -1,6 +1,8 @@
+from fileinput import filename
 import re
 
 import pandas as pd
+from pypyr import pipeline
 
 # REMI population figures are reported in thousands.
 REMI_POP_SCALE = 1000
@@ -114,6 +116,15 @@ def process_forecast(remi_path, county_map, gq_rates, headship_rates):
     out = out.sort_values(["year", "county_id"]).reset_index(drop=True)
     return out
 
+def get_headship_rates(context,headship_year):
+    cfg = context['headship_rates']
+    for entry in cfg:
+        if entry['year'] == headship_year:
+            filename = entry['filename']
+            column = entry['column_name']
+            df = pd.read_csv(f"{context['data_dir']}/{filename}")
+            return df[['county_id','age_group',column]].rename(columns={column:'headship_rate'})
+
 
 def run_step(context):
     data_dir = context["data_dir"]
@@ -128,14 +139,11 @@ def run_step(context):
     # 5-year group-quarters rates.
     gq_rates = pd.read_csv(f"{data_dir}/gq_rates.csv")[["county_id", "age_group", "gq_rate"]]
 
-    # Aggregated-bin headship rates, keyed by census year; each forecast can
-    # override the default headship_rate_year via its own config entry.
-    raw_headship_rates = pd.read_csv(f"{data_dir}/headship_rates_by_age.csv")
-
     forecast_frames = []
     for forecast in remi_forecasts:
         name = forecast["name"]
         forecast_headship_year = forecast.get("headship_rate_year", headship_year)
+        raw_headship_rates = get_headship_rates(context, forecast_headship_year)
         headship_rates = _headship_rates_for_year(raw_headship_rates, forecast_headship_year)
         print(
             f"Building REMI household/units totals for {name} "
