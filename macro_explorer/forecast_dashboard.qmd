@@ -344,6 +344,14 @@ viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", for
 ```
 
 ```{ojs}
+viewof yearFrom = Inputs.range([minYear, maxYear], {label: "From Year", step: 5, value: minYear})
+```
+
+```{ojs}
+viewof yearTo = Inputs.range([minYear, maxYear], {label: "To Year", step: 5, value: maxYear})
+```
+
+```{ojs}
 viewof selHistorical = persistentCheckbox("Historical")
 ```
 
@@ -360,6 +368,17 @@ viewof selGrowthTarget = persistentCheckbox("Growth Target")
 ```{ojs}
 //| output: false
 allData = transpose(data)
+```
+
+```{ojs}
+//| output: false
+// Overall year bounds rounded outward to a 5-year boundary, for the year-range sliders.
+minYear = Math.floor(d3.min(allData, d => d.year) / 5) * 5
+```
+
+```{ojs}
+//| output: false
+maxYear = Math.ceil(d3.max(allData, d => d.year) / 5) * 5
 ```
 
 ```{ojs}
@@ -465,7 +484,9 @@ selectedNames = new Set([...selHistorical, ...selForecast, ...selGrowthTarget])
 filtered = allData.filter(d =>
   d.geography === geography &&
   selectedNames.has(d.name) &&
-  d[metric] != null
+  d[metric] != null &&
+  d.year >= yearFrom &&
+  d.year <= yearTo
 )
 ```
 
