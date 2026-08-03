@@ -1,2 +1,4 @@
-*
-!.gitignore
+REMI_forecasts_counties_summed_all_years.csv
+acs_county_totals.csv
+decennial_totals.csv
+gq_rates.csv
