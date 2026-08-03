@@ -344,11 +344,7 @@ viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", for
 ```
 
 ```{ojs}
-viewof yearFrom = Inputs.range([minYear, maxYear], {label: "From Year", step: 5, value: minYear})
-```
-
-```{ojs}
-viewof yearTo = Inputs.range([minYear, maxYear], {label: "To Year", step: 5, value: maxYear})
+viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 5, value: maxYear})
 ```
 
 ```{ojs}
@@ -372,7 +368,7 @@ allData = transpose(data)
 
 ```{ojs}
 //| output: false
-// Overall year bounds rounded outward to a 5-year boundary, for the year-range sliders.
+// Overall year bounds rounded outward to a 5-year boundary, for the end-year slider.
 minYear = Math.floor(d3.min(allData, d => d.year) / 5) * 5
 ```
 
@@ -485,7 +481,6 @@ filtered = allData.filter(d =>
   d.geography === geography &&
   selectedNames.has(d.name) &&
   d[metric] != null &&
-  d.year >= yearFrom &&
   d.year <= yearTo
 )
 ```
