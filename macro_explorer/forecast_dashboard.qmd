@@ -125,6 +125,15 @@ def clean_luvit(df, occ_rates):
     return out_df
 
 
+def clean_bayes_pop(cfg, file_path):
+    df = pd.read_csv(file_path)
+    df["county_id"] = (df["county"] + " County").map(cfg["county_map"])
+    df = df.rename(columns={"population": "total_pop"})
+    df["name"] = "BayesPop"
+    df["type"] = "Forecast"
+    return df[["county_id", "year", "total_pop", "name", "type"]]
+
+
 def clean_woods_poole(cfg, acs_occ):
     wp_files = {county_id: filename for d in cfg["woods_poole_files"] for county_id, filename in d.items()}
     row_map = {
@@ -207,7 +216,10 @@ luvit = clean_luvit(luvit, acs_occ)
 # Woods & Poole forecast
 wp = clean_woods_poole(cfg, acs_occ)
 
-df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit, wp], ignore_index=True)
+# Bayesian population forecast
+bayes = clean_bayes_pop(cfg, os.path.join(cfg["data_dir"], cfg["bayes_pop_file"]))
+
+df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit, wp, bayes], ignore_index=True)
 
 
 # --- Build the county + region view -----------------------------------------
@@ -457,6 +469,7 @@ Plot.plot({
 - **OFM v2022 Low, Med, High**: OFM projections released in 2022 (low, medium, and high growth variants)
 - **LUVit**: Land Use Vision forecast
 - **Woods & Poole**: Woods & Poole Economics regional county-level projections, 2026-2060
+- **BayesPop**: Population forecast using BayesPop R library, 2025 and 2050 only (population only, no housing metrics). OFM will be using same model and inputs in their next forecast.
 
 *Note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
 

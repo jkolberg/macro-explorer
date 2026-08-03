@@ -82,6 +82,8 @@ woods_poole_files:
   - 53053: Pierce2026.csv
   - 53061: Snohomish2026.csv
 
+bayes_pop_file: bayes_pop_forecast.csv
+
 steps:
   # - macro_explorer.steps.get_decennial_data
   # - macro_explorer.steps.get_acs_data
