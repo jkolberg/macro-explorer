@@ -50,6 +50,20 @@ remi_forecasts:
   # - name: REMI_Scenario_Amzn_+50%
   #   filename: REMI_v3.3_amzn_grows_50_pct.xlsx
 
+prev_ofm_forcasts:
+  - release_year: 2017
+    projection_start_year: 2015
+    filename: gma_2017_pop_med.xlsx
+  - release_year: 2012
+    projection_start_year: 2010
+    filename: gma2012_1yr_med.xls
+  - release_year: 2007
+    projection_start_year: 2005
+    filename: gma2007_1yr_med.xls
+  - release_year: 2002
+    projection_start_year: 2000
+    filename: gma2002_med.xls
+
 remi_output_file: REMI_forecasts_counties_summed_all_years.csv
 remi_base_year: 2023
 remi_history_file: REMI_History.xlsx
@@ -85,7 +99,7 @@ woods_poole_files:
 bayes_pop_file: bayes_pop_forecast.csv
 
 steps:
-  # - macro_explorer.steps.get_decennial_data
-  # - macro_explorer.steps.get_acs_data
+  - macro_explorer.steps.get_decennial_data
+  - macro_explorer.steps.get_acs_data
   - macro_explorer.steps.get_remi_hh_units
-  - macro_explorer.steps.render_dashboard
+  # - macro_explorer.steps.render_dashboard

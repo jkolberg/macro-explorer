@@ -158,6 +158,45 @@ def clean_woods_poole(cfg, acs_occ):
     return df_out
 
 
+# Sheet name and 0-indexed year-header row for each prior GMA/OFM population
+# forecast workbook; layout varies release to release, values don't.
+_PREV_OFM_LAYOUT = {
+    2017: {"sheet_name": "Population", "header_row": 3},
+    2012: {"sheet_name": "Pop_Totals", "header_row": 4},
+    2007: {"sheet_name": "Pop_Totals", "header_row": 3},
+    2002: {"sheet_name": "Sheet1", "header_row": 3},
+}
+
+
+def clean_prev_ofm_forecast(cfg, file_path, release_year, projection_start_year):
+    """Read one historical GMA/OFM population forecast workbook, keeping only
+    the projected years (>= projection_start_year) for the configured counties."""
+    layout = _PREV_OFM_LAYOUT[release_year]
+    df = pd.read_excel(file_path, sheet_name=layout["sheet_name"], header=layout["header_row"])
+    df = df.rename(columns={df.columns[0]: "county"})
+    year_cols = [c for c in df.columns if isinstance(c, (int, float)) and not pd.isna(c)]
+    long = df.melt(id_vars="county", value_vars=year_cols, var_name="year", value_name="total_pop")
+    long["year"] = long["year"].astype(int)
+    long = long[long["year"] >= projection_start_year]
+    long["county_id"] = (long["county"].astype(str).str.strip() + " County").map(cfg["county_map"])
+    long = long.dropna(subset=["county_id", "total_pop"])
+    long["county_id"] = long["county_id"].astype(int)
+    long["total_pop"] = long["total_pop"].round(0).astype(int)
+    long["name"] = f"OFM v{release_year}"
+    long["type"] = "Forecast"
+    return long[["county_id", "year", "total_pop", "name", "type"]]
+
+
+def clean_prev_ofm_forecasts(cfg):
+    frames = []
+    for entry in cfg["prev_ofm_forcasts"]:
+        file_path = os.path.join(cfg["data_dir"], entry["filename"])
+        frames.append(
+            clean_prev_ofm_forecast(cfg, file_path, entry["release_year"], entry["projection_start_year"])
+        )
+    return pd.concat(frames, ignore_index=True)
+
+
 # Growth targets
 growth_targets = clean_growth_targets(cfg)
 growth_targets["type"] = "Growth Target"
@@ -219,7 +258,10 @@ wp = clean_woods_poole(cfg, acs_occ)
 # Bayesian population forecast
 bayes = clean_bayes_pop(cfg, os.path.join(cfg["data_dir"], cfg["bayes_pop_file"]))
 
-df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit, wp, bayes], ignore_index=True)
+# Previous OFM/GMA population forecasts
+prev_ofm = clean_prev_ofm_forecasts(cfg)
+
+df = pd.concat([dec, acs, remi, pep, ofm, remi_hist, growth_targets, luvit, wp, bayes, prev_ofm], ignore_index=True)
 
 
 # --- Build the county + region view -----------------------------------------
@@ -470,6 +512,7 @@ Plot.plot({
 - **LUVit**: Land Use Vision forecast
 - **Woods & Poole**: Woods & Poole Economics regional county-level projections, 2026-2060
 - **BayesPop**: Population forecast using BayesPop R library, 2025 and 2050 only (population only, no housing metrics). OFM will be using same model and inputs in their next forecast.
+- **OFM v2002, v2007, v2012, v2017**: Prior GMA/OFM population projections (population only, no housing metrics), named by release year.
 
 *Note: Forecast hh, hhpop, hhsz, and units are calculated using the proposed headship rate methodology.*
 
