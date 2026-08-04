@@ -75,16 +75,24 @@ def clean_growth_targets(cfg):
 
 
 def clean_ofm(cfg, file_path, ofm_type):
+    """Parse an OFM postcensal estimates workbook (population or housing units).
+
+    Each year is represented by multiple columns (e.g. a breakdown by unit type,
+    or a duplicate "Census Count" column in years overlapping a decennial
+    census); col_filter narrows to the single "total" column per year. The
+    population workbook goes back to 1960 and the housing workbook to 1980;
+    year_cols is derived from whatever years are actually present in each
+    file rather than a hardcoded range.
+    """
     ofm_types = {"total_pop": "Population", "units": "Housing Units"}
-    skip_rows = {"total_pop": 4, "units": 3}
     col_filter = {"total_pop": None, "units": "Total Housing Units"}
-    df = pd.read_excel(file_path, skiprows=skip_rows[ofm_type], sheet_name=ofm_types[ofm_type])
+    df = pd.read_excel(file_path, skiprows=3, sheet_name=ofm_types[ofm_type])
     df["county_id"] = df["Jurisdiction"].map(cfg["county_map"])
     df = df.loc[df["county_id"].notna()].copy()
     flt = col_filter[ofm_type]
-    value_cols = [c for c in df.columns if c[:4].isdigit() and (flt is None or flt in c)]
+    value_cols = [c for c in df.columns if str(c)[:4].isdigit() and (flt is None or flt in str(c))]
     df = df.rename(columns={c: c[:4] for c in value_cols})
-    year_cols = [str(y) for y in range(2020, 2026)]
+    year_cols = sorted({c[:4] for c in value_cols})
     ofm = df[["county_id"] + year_cols].melt(id_vars="county_id", var_name="year", value_name=ofm_type)
     return ofm
 
@@ -213,7 +221,9 @@ remi_hist = (
 # OFM (population + housing)
 ofm_pop = clean_ofm(cfg, os.path.join(cfg["data_dir"], cfg["ofm_population_file"]), "total_pop")
 ofm_housing = clean_ofm(cfg, os.path.join(cfg["data_dir"], cfg["ofm_housing_file"]), "units")
-ofm = ofm_pop.merge(ofm_housing, on=["county_id", "year"])
+# outer join: population and housing years don't always match exactly, so a
+# year is kept even if only one metric reports it (the other stays null).
+ofm = ofm_pop.merge(ofm_housing, on=["county_id", "year"], how="outer")
 ofm["year"] = ofm["year"].astype(int)
 ofm["name"] = "OFM"
 ofm["type"] = "Historical"
@@ -513,7 +523,7 @@ Plot.plot({
 
 - **Decennial**: U.S. Census Bureau decennial census counts 2000, 2010 and 2020
 - **ACS**: U.S. Census Bureau American Community Survey 1-year estimates 2009-2024 (2020 not available)
-- **OFM**: WA Office of Financial Management official population and housing unit estimates 2020-2025
+- **OFM**: WA Office of Financial Management official postcensal population (1960-2026) and housing unit (1980-2026) estimates
 - **PEP**: U.S. Census Bureau Population Estimates Program population and housing unit estimates 2020-2025
 - **REMI History**: historical population inputs to REMI economic model
 - **Woods & Poole History**: Woods & Poole Economics regional county-level estimates, 1969-2025
