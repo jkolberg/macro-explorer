@@ -354,6 +354,10 @@ viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", for
 ```
 
 ```{ojs}
+viewof yearFrom = Inputs.range([minYear, maxYear], {label: "Start Year", step: 5, value: minYear})
+```
+
+```{ojs}
 viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 5, value: maxYear})
 ```
 
@@ -491,6 +495,7 @@ filtered = allData.filter(d =>
   d.geography === geography &&
   selectedNames.has(d.name) &&
   d[metric] != null &&
+  d.year >= yearFrom &&
   d.year <= yearTo
 )
 ```
