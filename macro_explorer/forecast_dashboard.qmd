@@ -5,6 +5,10 @@ format:
     embed-resources: true
     theme: cosmo
     output-file: index.html
+    nav-buttons:
+      - icon: file-earmark-text
+        href: remi_story.html
+        aria-label: "REMI Story"
 ---
 
 ```{python}
@@ -344,6 +348,8 @@ ojs_define(data=combined)
 # Dashboard
 
 ## {.sidebar width="320px"}
+
+[📊 Read the REMI Story ➡](remi_story.html)
 
 ```{ojs}
 viewof geography = Inputs.radio(geographies, {label: "Geography", value: "Region"})
