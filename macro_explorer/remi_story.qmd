@@ -136,13 +136,16 @@ From 2010 to 2019, Seattle population grew **1.57% per year**, more than twice t
 
 The post-2019 pattern is different. From 2019 to 2024, Seattle employment grew **0.83% per year**, while the U.S. grew **1.49%**. The region moved from a clear employment advantage to a **-0.66 percentage point jobs gap**. The forecast starts in 2025 with that recent reset in the background: Seattle is still expected to grow faster than the nation, but at a more ordinary pace than the last boom.
 
-::: {.callout-important}
 The largest reason for a less optimistic population forecast is a weaker employment story. The model still expects Seattle to outperform the U.S., but not by enough to recreate the migration surge of the 2010s.
-:::
+
 
 ## Population Growth Is Still Positive, But the 2010s Were the Outlier
 
 The 2010s were a rare period when the Seattle region combined fast population growth with very fast employment growth. That combination matters because migration is the swing factor in a regional forecast. Births and deaths move gradually; job opportunities can change the number of people moving in much faster.
+
+::: {.callout-note title="What is CAGR?"}
+CAGR (Compound Annual Growth Rate) is the steady yearly growth rate that would take a value from its starting point to its ending point over a given number of years, smoothing out year-to-year bumps. A CAGR of 1.5% means the value grows, on average, 1.5% per year over the period.
+:::
 
 ```{python}
 #| label: fig-pop-jobs-cagr
