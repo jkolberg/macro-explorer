@@ -1,0 +1,364 @@
+---
+title: "Why the New REMI Population Forecast Is More Cautious"
+subtitle: "A demographer's story about jobs, migration, and slower momentum in the Seattle region"
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-depth: 2
+    theme: cosmo
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+[⬅ Back to the Forecast Explorer dashboard](index.html)
+
+```{python}
+#| output: false
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+plt.style.use("seaborn-v0_8-whitegrid")
+plt.rcParams.update(
+    {
+        "figure.figsize": (10, 5.8),
+        "axes.titlesize": 15,
+        "axes.labelsize": 11,
+        "xtick.labelsize": 10,
+        "ytick.labelsize": 10,
+        "legend.fontsize": 10,
+        "font.family": "DejaVu Sans",
+    }
+)
+
+DATA_PATH = Path("data/REMI_output.csv")
+df = pd.read_csv(DATA_PATH)
+
+sea = df[df["Area"] == "Seattle Region"].set_index("Category").drop(columns=["Area"])
+us = df[df["Area"] == "United States"].set_index("Category").drop(columns=["Area"])
+sea.columns = sea.columns.astype(int)
+us.columns = us.columns.astype(int)
+
+emp_categories = [category for category in sea.index if category.startswith("Employment")]
+sea.loc["Total Employment"] = sea.loc[emp_categories].sum(axis=0)
+us.loc["Total Employment"] = us.loc[emp_categories].sum(axis=0)
+
+
+def cagr(start_value, end_value, years):
+    return ((end_value / start_value) ** (1 / years) - 1) * 100
+
+
+def period_metrics(label, start, end):
+    years = end - start
+    year_range = list(range(start, end + 1))
+    seattle_population = cagr(sea.loc["Population", start], sea.loc["Population", end], years)
+    us_population = cagr(us.loc["Population", start], us.loc["Population", end], years)
+    seattle_employment = cagr(sea.loc["Total Employment", start], sea.loc["Total Employment", end], years)
+    us_employment = cagr(us.loc["Total Employment", start], us.loc["Total Employment", end], years)
+    migrants = sea.loc["Total Migrants", year_range]
+    population = sea.loc["Population", year_range]
+    natural_increase = sea.loc["Births", year_range] - sea.loc["Deaths", year_range]
+    return {
+        "Period": label,
+        "Start": start,
+        "End": end,
+        "Seattle pop CAGR": seattle_population,
+        "U.S. pop CAGR": us_population,
+        "Pop premium": seattle_population - us_population,
+        "Seattle jobs CAGR": seattle_employment,
+        "U.S. jobs CAGR": us_employment,
+        "Jobs premium": seattle_employment - us_employment,
+        "Avg net migrants": migrants.mean(),
+        "Avg migrants per 1,000 residents": (migrants / population * 1000).mean(),
+        "Avg natural increase": natural_increase.mean(),
+    }
+
+
+periods = [
+    ("2001-2010: early history", 2001, 2010),
+    ("2010-2019: expansion", 2010, 2019),
+    ("2019-2024: recent reset", 2019, 2024),
+    ("2025-2035: near forecast", 2025, 2035),
+    ("2025-2050: long forecast", 2025, 2050),
+    ("2025-2060: full forecast", 2025, 2060),
+]
+period_summary = pd.DataFrame([period_metrics(*period) for period in periods])
+
+sector_rows = []
+for category in emp_categories:
+    industry = category.replace("Employment - ", "")
+    row = {
+        "Industry": industry,
+        "2019 jobs": sea.loc[category, 2019],
+        "2024 jobs": sea.loc[category, 2024],
+        "2035 jobs": sea.loc[category, 2035],
+        "Seattle boom CAGR": cagr(sea.loc[category, 2010], sea.loc[category, 2019], 9),
+        "U.S. boom CAGR": cagr(us.loc[category, 2010], us.loc[category, 2019], 9),
+        "Seattle recent CAGR": cagr(sea.loc[category, 2019], sea.loc[category, 2024], 5),
+        "U.S. recent CAGR": cagr(us.loc[category, 2019], us.loc[category, 2024], 5),
+        "Seattle forecast CAGR": cagr(sea.loc[category, 2025], sea.loc[category, 2035], 10),
+        "U.S. forecast CAGR": cagr(us.loc[category, 2025], us.loc[category, 2035], 10),
+        "Job change 2019-2024": sea.loc[category, 2024] - sea.loc[category, 2019],
+        "Job change 2025-2035": sea.loc[category, 2035] - sea.loc[category, 2025],
+    }
+    row["Boom premium"] = row["Seattle boom CAGR"] - row["U.S. boom CAGR"]
+    row["Recent premium"] = row["Seattle recent CAGR"] - row["U.S. recent CAGR"]
+    row["Forecast premium"] = row["Seattle forecast CAGR"] - row["U.S. forecast CAGR"]
+    row["Seattle slowdown"] = row["Seattle forecast CAGR"] - row["Seattle boom CAGR"]
+    row["Premium change"] = row["Forecast premium"] - row["Boom premium"]
+    sector_rows.append(row)
+
+sector_summary = pd.DataFrame(sector_rows)
+
+largest_sectors = sector_summary.sort_values("2019 jobs", ascending=False).head(12).copy()
+big_sector_slowdowns = (
+    sector_summary[sector_summary["2019 jobs"] > 50_000]
+    .sort_values("Seattle slowdown")
+    .head(10)
+    .copy()
+)
+recent_underperformers = (
+    sector_summary[(sector_summary["Boom premium"] > 0) & (sector_summary["Recent premium"] < 0)]
+    .sort_values("Recent premium")
+    .copy()
+)
+```
+
+## The Short Version
+
+The new forecast is not saying the Seattle region stops growing. It is saying the region no longer looks like the exceptional 2010s.
+
+From 2010 to 2019, Seattle population grew **1.57% per year**, more than twice the U.S. rate of **0.73%**. That population surge was paired with a strong labor market: Seattle employment grew **2.45% per year**, compared with **1.72% nationally**. The region's job-growth premium was **+0.73 percentage points**.
+
+The post-2019 pattern is different. From 2019 to 2024, Seattle employment grew **0.83% per year**, while the U.S. grew **1.49%**. The region moved from a clear employment advantage to a **-0.66 percentage point jobs gap**. The forecast starts in 2025 with that recent reset in the background: Seattle is still expected to grow faster than the nation, but at a more ordinary pace than the last boom.
+
+::: {.callout-important}
+The largest reason for a less optimistic population forecast is a weaker employment story. The model still expects Seattle to outperform the U.S., but not by enough to recreate the migration surge of the 2010s.
+:::
+
+## Population Growth Is Still Positive, But the 2010s Were the Outlier
+
+The 2010s were a rare period when the Seattle region combined fast population growth with very fast employment growth. That combination matters because migration is the swing factor in a regional forecast. Births and deaths move gradually; job opportunities can change the number of people moving in much faster.
+
+```{python}
+#| label: fig-pop-jobs-cagr
+#| fig-cap: "Seattle's growth advantage narrowed sharply after 2019. The forecast restores some advantage, but not the 2010s pace."
+plot_periods = period_summary.iloc[:4].copy()
+x = range(len(plot_periods))
+width = 0.34
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 5.5), sharey=True)
+
+axes[0].bar([i - width / 2 for i in x], plot_periods["Seattle pop CAGR"], width, label="Seattle", color="#2f6f73")
+axes[0].bar([i + width / 2 for i in x], plot_periods["U.S. pop CAGR"], width, label="U.S.", color="#b9a44c")
+axes[0].set_title("Population growth")
+axes[0].set_ylabel("CAGR")
+axes[0].set_xticks(list(x), ["2001-10", "2010-19", "2019-24", "2025-35"], rotation=0)
+
+axes[1].bar([i - width / 2 for i in x], plot_periods["Seattle jobs CAGR"], width, label="Seattle", color="#2f6f73")
+axes[1].bar([i + width / 2 for i in x], plot_periods["U.S. jobs CAGR"], width, label="U.S.", color="#b9a44c")
+axes[1].set_title("Employment growth")
+axes[1].set_xticks(list(x), ["2001-10", "2010-19", "2019-24", "2025-35"], rotation=0)
+
+for axis in axes:
+    axis.axhline(0, color="#333333", linewidth=0.8)
+    axis.yaxis.set_major_formatter(lambda value, position: f"{value:.1f}%")
+    axis.legend(frameon=False)
+
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tbl-period-summary
+#| tbl-cap: "Headline population, employment, and migration indicators"
+display_cols = [
+    "Period",
+    "Seattle pop CAGR",
+    "U.S. pop CAGR",
+    "Seattle jobs CAGR",
+    "U.S. jobs CAGR",
+    "Jobs premium",
+    "Avg net migrants",
+    "Avg migrants per 1,000 residents",
+    "Avg natural increase",
+]
+period_summary[display_cols].style.format(
+    {
+        "Seattle pop CAGR": "{:.2f}%",
+        "U.S. pop CAGR": "{:.2f}%",
+        "Seattle jobs CAGR": "{:.2f}%",
+        "U.S. jobs CAGR": "{:.2f}%",
+        "Jobs premium": "{:+.2f} pts",
+        "Avg net migrants": "{:,.0f}",
+        "Avg migrants per 1,000 residents": "{:.1f}",
+        "Avg natural increase": "{:,.0f}",
+    }
+)
+```
+
+## Migration Is the Channel Where Jobs Become Population
+
+During the 2010-2019 expansion, the region averaged about **35,400 net migrants per year**, or **8.8 migrants per 1,000 residents**. From 2019 to 2024, that average fell to about **12,300 per year**, or **2.8 per 1,000 residents**.
+
+The 2025-2035 forecast assumes migration recovers to about **24,300 per year**, but not to the 2010s level. At the same time, natural increase weakens: births minus deaths averaged **22,800 per year** in the 2010s, **15,600** from 2019 to 2024, and only **10,900** in the 2025-2035 forecast.
+
+That means the forecast has less help from both engines of population growth: fewer migrants than in the boom, and a smaller cushion from natural increase.
+
+```{python}
+#| label: fig-migration-natural-increase
+#| fig-cap: "The forecast assumes migration rebounds, but natural increase keeps weakening."
+components = period_summary.iloc[:4].copy()
+labels = ["2001-10", "2010-19", "2019-24", "2025-35"]
+
+fig, axis = plt.subplots(figsize=(10, 5.8))
+axis.bar(labels, components["Avg net migrants"], label="Average net migrants", color="#2f6f73")
+axis.bar(
+    labels,
+    components["Avg natural increase"],
+    bottom=components["Avg net migrants"],
+    label="Average natural increase",
+    color="#d9a441",
+)
+axis.set_title("Average Annual Additions to Population")
+axis.set_ylabel("People per year")
+axis.yaxis.set_major_formatter(lambda value, position: f"{value/1000:.0f}k")
+axis.legend(frameon=False)
+plt.tight_layout()
+plt.show()
+```
+
+## The Employment Story Changed in the Sectors That Used to Pull People In
+
+The most important change is not that every industry turned negative. The more useful stakeholder framing is that the engines of the 2010s stopped being extraordinary.
+
+Information is the clearest example. In the expansion, Seattle information employment grew **4.04% per year**, far above the U.S. rate of **0.60%**. That was a **+3.45 percentage point** regional premium. In the 2025-2035 forecast, Seattle information employment grows **1.07% per year**. That is still above the national rate, but the premium falls to **+0.41 percentage points**.
+
+Professional, scientific, and technical services also cools. It grew **2.79% per year** in Seattle during the 2010s, then **2.64%** from 2019 to 2024, but the U.S. grew faster in the recent period. The forecast has Seattle at **1.31% per year** from 2025 to 2035. That is growth, but not the kind of growth that produces a 2010s-style migration wave.
+
+Retail, accommodation and food services, manufacturing, and construction add another part of the story: these are large employment bases, and several weakened or lost jobs after 2019. Retail lost about **34,500 jobs** from 2019 to 2024. Manufacturing lost about **21,300**. Accommodation and food services lost about **14,000**. When large local-serving sectors struggle, the region does not absorb newcomers as easily, even if high-wage sectors continue to grow.
+
+```{python}
+#| label: fig-sector-slowdowns
+#| fig-cap: "Several large sectors remain positive in the forecast, but their growth rates are far below the 2010s expansion."
+slowdowns = big_sector_slowdowns.sort_values("Seattle slowdown").copy()
+y = range(len(slowdowns))
+
+fig, axis = plt.subplots(figsize=(10.5, 6.2))
+axis.hlines(y, slowdowns["Seattle forecast CAGR"], slowdowns["Seattle boom CAGR"], color="#c9c2a3", linewidth=3)
+axis.scatter(slowdowns["Seattle boom CAGR"], y, label="2010-2019", color="#2f6f73", s=70)
+axis.scatter(slowdowns["Seattle forecast CAGR"], y, label="2025-2035", color="#b24a3b", s=70)
+axis.set_yticks(list(y), slowdowns["Industry"])
+axis.set_xlabel("Seattle employment CAGR")
+axis.set_title("The 2010s Growth Engines Slow in the Forecast")
+axis.xaxis.set_major_formatter(lambda value, position: f"{value:.0f}%")
+axis.legend(frameon=False)
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: tbl-sector-slowdowns
+#| tbl-cap: "Largest boom-to-forecast slowdowns among major Seattle employment sectors"
+sector_table_cols = [
+    "Industry",
+    "2019 jobs",
+    "Seattle boom CAGR",
+    "Seattle recent CAGR",
+    "Seattle forecast CAGR",
+    "Seattle slowdown",
+    "Boom premium",
+    "Forecast premium",
+    "Job change 2019-2024",
+    "Job change 2025-2035",
+]
+big_sector_slowdowns[sector_table_cols].style.format(
+    {
+        "2019 jobs": "{:,.0f}",
+        "Seattle boom CAGR": "{:.2f}%",
+        "Seattle recent CAGR": "{:.2f}%",
+        "Seattle forecast CAGR": "{:.2f}%",
+        "Seattle slowdown": "{:+.2f} pts",
+        "Boom premium": "{:+.2f} pts",
+        "Forecast premium": "{:+.2f} pts",
+        "Job change 2019-2024": "{:,.0f}",
+        "Job change 2025-2035": "{:,.0f}",
+    }
+)
+```
+
+## Which Industries Fell Behind the Nation?
+
+No major sector in this REMI file has the exact pattern of being above the national rate in 2010-2019 and below the national rate in the 2025-2035 forecast. The forecast generally gives Seattle a modest edge over the U.S. by 2025-2035.
+
+But the recent history does show the warning sign stakeholders should focus on: several sectors that were growing faster than the U.S. in the 2010s grew slower than the U.S. from 2019 to 2024. That recent underperformance is why the forecast begins from a more cautious place.
+
+```{python}
+#| label: tbl-recent-underperformers
+#| tbl-cap: "Sectors that had a Seattle growth premium in 2010-2019 but fell below the U.S. in 2019-2024"
+recent_cols = [
+    "Industry",
+    "2019 jobs",
+    "Seattle boom CAGR",
+    "U.S. boom CAGR",
+    "Boom premium",
+    "Seattle recent CAGR",
+    "U.S. recent CAGR",
+    "Recent premium",
+    "Job change 2019-2024",
+]
+recent_underperformers[recent_cols].style.format(
+    {
+        "2019 jobs": "{:,.0f}",
+        "Seattle boom CAGR": "{:.2f}%",
+        "U.S. boom CAGR": "{:.2f}%",
+        "Boom premium": "{:+.2f} pts",
+        "Seattle recent CAGR": "{:.2f}%",
+        "U.S. recent CAGR": "{:.2f}%",
+        "Recent premium": "{:+.2f} pts",
+        "Job change 2019-2024": "{:,.0f}",
+    }
+)
+```
+
+The largest recent reversals are especially important because they touch everyday labor-market capacity:
+
+- **Retail trade** went from **3.15% annual growth** in 2010-2019 to **-2.55%** in 2019-2024, losing about **34,500 jobs**.
+- **Manufacturing** went from modest growth to **-2.26%** annually in 2019-2024, losing about **21,300 jobs**.
+- **Accommodation and food services** grew **3.38%** annually in the expansion, then declined **1.50%** annually after 2019.
+- **Construction** grew **4.10%** annually in the expansion, but only **0.24%** annually from 2019 to 2024, well below the U.S. rate.
+- **Health care and social assistance** stayed positive, but Seattle's recent growth of **0.92%** was below the U.S. rate of **1.95%**.
+
+## The Forecast's More Pessimistic Causes, Ranked
+
+### 1. The job-growth premium is smaller
+
+The 2010s forecast logic was powered by an exceptional local labor market. The new forecast still has Seattle employment growing faster than the U.S. from 2025 to 2035, but the regional premium is **+0.47 percentage points**, not the **+0.73** premium of the 2010s. More importantly, the forecast follows a recent period when Seattle was **0.66 percentage points below** the U.S.
+
+### 2. The tech and professional-services pull is less extraordinary
+
+Information and professional services remain growth sectors, but their forecast rates are much slower than their 2010s rates. The forecast is not assuming another decade in which Seattle's information sector grows almost seven times as fast as the national information sector.
+
+### 3. Large local-serving sectors lost momentum
+
+Retail, accommodation and food services, manufacturing, and construction either lost jobs or slowed sharply after 2019. These sectors matter because population growth needs a broad labor market, not just high-wage job creation.
+
+### 4. Migration recovers, but not to boom levels
+
+The 2010s averaged **35,400 net migrants per year**. The 2025-2035 forecast averages **24,300**. That difference alone is a major reason the population path is lower than older, more optimistic expectations.
+
+### 5. Natural increase contributes less
+
+Births minus deaths is projected to average **10,900 per year** from 2025 to 2035, down from **22,800** in the 2010s. Even if migration improves, demographics are providing less background growth.
+
+## A Stakeholder-Friendly Closing Frame
+
+The message is not that Seattle is losing its economic role. The message is that the old forecast optimism depended on a very specific pattern: unusually fast job growth, especially in high-growth traded sectors, paired with strong in-migration and a larger natural increase.
+
+The new forecast is more cautious because that pattern has weakened. Seattle is still forecast to grow faster than the nation, but the growth story is less explosive, more dependent on a smaller set of sectors, and less supported by natural increase. In population terms, that means fewer people are expected to move here than during the last expansion, and the people already here add less growth through births than they did a decade ago.
+
+The practical takeaway: the forecast is not pessimistic because it assumes decline. It is more cautious because it assumes Seattle grows like a strong but maturing region, not like the breakout region it was in the 2010s.
