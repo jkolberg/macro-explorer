@@ -1,6 +1,6 @@
 ---
 title: "Why the New REMI Population Forecast Is More Cautious"
-subtitle: "A demographer's story about jobs, migration, and slower momentum in the Seattle region"
+subtitle: "Jobs, migration, and slower momentum in the Seattle region"
 format:
   html:
     embed-resources: true
@@ -234,9 +234,9 @@ plt.show()
 
 ## The Employment Story Changed in the Sectors That Used to Pull People In
 
-The most important change is not that every industry turned negative. The more useful stakeholder framing is that the engines of the 2010s stopped being extraordinary.
+The most important change is not that every industry turned negative. The more useful framing is that the engines of the 2010s stopped being extraordinary.
 
-Information is the clearest example. In the expansion, Seattle information employment grew **4.04% per year**, far above the U.S. rate of **0.60%**. That was a **+3.45 percentage point** regional premium. In the 2025-2035 forecast, Seattle information employment grows **1.07% per year**. That is still above the national rate, but the premium falls to **+0.41 percentage points**.
+The Information sector is the clearest example. In the expansion, Seattle information employment grew **4.04% per year**, far above the U.S. rate of **0.60%**. That was a **+3.45 percentage point** regional premium. In the 2025-2035 forecast, Seattle information employment grows **1.07% per year**. That is still above the national rate, but the premium falls to **+0.41 percentage points**.
 
 Professional, scientific, and technical services also cools. It grew **2.79% per year** in Seattle during the 2010s, then **2.64%** from 2019 to 2024, but the U.S. grew faster in the recent period. The forecast has Seattle at **1.31% per year** from 2025 to 2035. That is growth, but not the kind of growth that produces a 2010s-style migration wave.
 
@@ -293,9 +293,9 @@ big_sector_slowdowns[sector_table_cols].style.format(
 
 ## Which Industries Fell Behind the Nation?
 
-No major sector in this REMI file has the exact pattern of being above the national rate in 2010-2019 and below the national rate in the 2025-2035 forecast. The forecast generally gives Seattle a modest edge over the U.S. by 2025-2035.
+No major sector in the REMI forecast has the exact pattern of being above the national rate in 2010-2019 and below the national rate in the 2025-2035 forecast. The forecast generally gives Seattle a modest edge over the U.S. by 2025-2035.
 
-But the recent history does show the warning sign stakeholders should focus on: several sectors that were growing faster than the U.S. in the 2010s grew slower than the U.S. from 2019 to 2024. That recent underperformance is why the forecast begins from a more cautious place.
+But the recent history does show the warning sign we should focus on: several sectors that were growing faster than the U.S. in the 2010s grew slower than the U.S. from 2019 to 2024. That recent underperformance is why the forecast begins from a more cautious place.
 
 ```{python}
 #| label: tbl-recent-underperformers
@@ -325,7 +325,7 @@ recent_underperformers[recent_cols].style.format(
 )
 ```
 
-The largest recent reversals are especially important because they touch everyday labor-market capacity:
+The largest recent reversals:
 
 - **Retail trade** went from **3.15% annual growth** in 2010-2019 to **-2.55%** in 2019-2024, losing about **34,500 jobs**.
 - **Manufacturing** went from modest growth to **-2.26%** annually in 2019-2024, losing about **21,300 jobs**.
@@ -333,7 +333,7 @@ The largest recent reversals are especially important because they touch everyda
 - **Construction** grew **4.10%** annually in the expansion, but only **0.24%** annually from 2019 to 2024, well below the U.S. rate.
 - **Health care and social assistance** stayed positive, but Seattle's recent growth of **0.92%** was below the U.S. rate of **1.95%**.
 
-## The Forecast's More Pessimistic Causes, Ranked
+## The Forecast's More Pessimistic Causes:
 
 ### 1. The job-growth premium is smaller
 
@@ -355,10 +355,10 @@ The 2010s averaged **35,400 net migrants per year**. The 2025-2035 forecast aver
 
 Births minus deaths is projected to average **10,900 per year** from 2025 to 2035, down from **22,800** in the 2010s. Even if migration improves, demographics are providing less background growth.
 
-## A Stakeholder-Friendly Closing Frame
+## Closing Message
 
-The message is not that Seattle is losing its economic role. The message is that the old forecast optimism depended on a very specific pattern: unusually fast job growth, especially in high-growth traded sectors, paired with strong in-migration and a larger natural increase.
+The message is not that Seattle is losing its economic role. The message is that the old forecast optimism depended on a very specific pattern: unusually fast job growth, especially in high paying sectors, paired with strong in-migration and a larger natural increase.
 
 The new forecast is more cautious because that pattern has weakened. Seattle is still forecast to grow faster than the nation, but the growth story is less explosive, more dependent on a smaller set of sectors, and less supported by natural increase. In population terms, that means fewer people are expected to move here than during the last expansion, and the people already here add less growth through births than they did a decade ago.
 
-The practical takeaway: the forecast is not pessimistic because it assumes decline. It is more cautious because it assumes Seattle grows like a strong but maturing region, not like the breakout region it was in the 2010s.
+The takeaway: the forecast is not pessimistic because it assumes decline. It is more cautious because it assumes Seattle grows like a strong region, not like the breakout region it was in the 2010s.
