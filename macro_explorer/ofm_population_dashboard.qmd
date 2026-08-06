@@ -103,6 +103,7 @@ history = pd.concat(
     [county_df.drop(columns="county_id"), build_region(county_df)],
     ignore_index=True,
 ).sort_values(["geography", "year"])
+history["series"] = "OFM population"
 
 trends = build_decade_trends(history)
 
@@ -177,13 +178,13 @@ Plot.plot({
     Plot.line(selectedHistory, {
       x: "year",
       y: "total_pop",
-      stroke: "OFM history",
+      stroke: "series",
       strokeWidth: 2.6
     }),
     showPoints ? Plot.dot(selectedHistory, {
       x: "year",
       y: "total_pop",
-      stroke: "OFM history",
+      stroke: "series",
       fill: "white",
       r: 2.4
     }) : null,
