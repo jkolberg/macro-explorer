@@ -94,9 +94,17 @@ def clean_ofm(cfg, file_path, ofm_type):
     df["county_id"] = df["Jurisdiction"].map(cfg["county_map"])
     df = df.loc[df["county_id"].notna()].copy()
     flt = col_filter[ofm_type]
-    value_cols = [c for c in df.columns if str(c)[:4].isdigit() and (flt is None or flt in str(c))]
-    df = df.rename(columns={c: c[:4] for c in value_cols})
-    year_cols = sorted({c[:4] for c in value_cols})
+    year_choices = {}
+    for col in df.columns:
+        col_text = str(col)
+        if not col_text[:4].isdigit() or (flt is not None and flt not in col_text):
+            continue
+        year = col_text[:4]
+        current = year_choices.get(year)
+        if current is None or (ofm_type == "total_pop" and "Census Count" in col_text):
+            year_choices[year] = col
+    year_cols = sorted(year_choices)
+    df = df.rename(columns={year_choices[year]: year for year in year_cols})
     ofm = df[["county_id"] + year_cols].melt(id_vars="county_id", var_name="year", value_name=ofm_type)
     return ofm
 

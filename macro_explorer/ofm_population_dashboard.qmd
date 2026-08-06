@@ -1,0 +1,203 @@
+---
+title: "OFM Population History"
+format:
+  dashboard:
+    embed-resources: true
+    theme: cosmo
+    output-file: ofm_population_dashboard.html
+    nav-buttons:
+      - icon: bar-chart-line
+        href: index.html
+        aria-label: "Forecast Explorer"
+---
+
+```{python}
+#| output: false
+import os
+import re
+
+import pandas as pd
+import yaml
+
+cfg = yaml.safe_load(open("configs/settings.yaml"))
+
+COUNTY_MAP = cfg["county_map"]
+ID_TO_COUNTY = {v: k for k, v in COUNTY_MAP.items()}
+COUNTY_IDS = list(cfg["county_ids"])
+N_COUNTIES = len(COUNTY_IDS)
+
+
+def clean_ofm(cfg, file_path, ofm_type="total_pop"):
+    """Parse OFM postcensal population estimates, preferring decennial counts.
+
+    When the workbook includes both a postcensal estimate and a census count for
+    the same year, the census count column is retained.
+    """
+    if ofm_type != "total_pop":
+        raise ValueError("This dashboard only supports OFM total population data.")
+
+    df = pd.read_excel(file_path, skiprows=3, sheet_name="Population")
+    df["county_id"] = df["Jurisdiction"].map(cfg["county_map"])
+    df = df.loc[df["county_id"].notna()].copy()
+
+    year_choices = {}
+    for column in df.columns:
+        column_text = str(column)
+        match = re.match(r"^(\d{4})\b", column_text.strip())
+        if not match:
+            continue
+        year = match.group(1)
+        current = year_choices.get(year)
+        if current is None or "Census Count" in column_text:
+            year_choices[year] = column
+
+    year_cols = sorted(year_choices)
+    ofm = df[["county_id"] + [year_choices[year] for year in year_cols]].copy()
+    ofm = ofm.rename(columns={year_choices[year]: year for year in year_cols})
+    ofm = ofm.melt(id_vars="county_id", var_name="year", value_name=ofm_type)
+    ofm["year"] = ofm["year"].astype(int)
+    ofm[ofm_type] = pd.to_numeric(ofm[ofm_type], errors="coerce")
+    return ofm.dropna(subset=[ofm_type])
+
+
+def build_region(county_df):
+    region = (
+        county_df.groupby("year", as_index=False)
+        .agg(total_pop=("total_pop", "sum"), county_count=("county_id", "nunique"))
+        .query("county_count == @N_COUNTIES")
+        .drop(columns="county_count")
+    )
+    region["geography"] = "Region"
+    return region
+
+
+def build_decade_trends(history):
+    rows = []
+    for geography, geography_df in history.groupby("geography"):
+        for decade_start in range(1960, 2030, 10):
+            decade_end = min(decade_start + 9, 2026)
+            fit_df = geography_df.query("@decade_start <= year <= @decade_end")
+            if len(fit_df) < 2:
+                continue
+
+            slope, intercept = pd.Series(fit_df["total_pop"]).pipe(
+                lambda y: pd.Series(
+                    pd.array([fit_df["year"].cov(y) / fit_df["year"].var(), 0.0], dtype="float64")
+                )
+            )
+            intercept = fit_df["total_pop"].mean() - slope * fit_df["year"].mean()
+            trend_years = pd.DataFrame({"year": range(decade_start, 2061)})
+            trend_years["total_pop"] = slope * trend_years["year"] + intercept
+            trend_years["geography"] = geography
+            trend_years["decade"] = f"{decade_start}s"
+            rows.append(trend_years)
+    return pd.concat(rows, ignore_index=True)
+
+
+ofm = clean_ofm(cfg, os.path.join(cfg["data_dir"], cfg["ofm_population_file"]))
+county_df = ofm[ofm["county_id"].isin(COUNTY_IDS)].copy()
+county_df["geography"] = county_df["county_id"].map(ID_TO_COUNTY)
+county_df = county_df[["year", "geography", "county_id", "total_pop"]]
+
+history = pd.concat(
+    [county_df.drop(columns="county_id"), build_region(county_df)],
+    ignore_index=True,
+).sort_values(["geography", "year"])
+
+trends = build_decade_trends(history)
+
+ojs_define(history=history, trends=trends)
+```
+
+# Dashboard
+
+## {.sidebar width="300px"}
+
+```{ojs}
+viewof geography = Inputs.radio(geographies, {label: "Geography", value: "Region"})
+```
+
+```{ojs}
+viewof selectedTrendlines = Inputs.checkbox(decades, {label: "Trendlines", value: ["2020s"]})
+```
+
+```{ojs}
+viewof showPoints = Inputs.toggle({label: "Show annual points", value: true})
+```
+
+```{ojs}
+//| output: false
+historyData = transpose(history)
+```
+
+```{ojs}
+//| output: false
+trendData = transpose(trends)
+```
+
+```{ojs}
+//| output: false
+countyOrder = ["King County", "Kitsap County", "Pierce County", "Snohomish County"]
+```
+
+```{ojs}
+//| output: false
+geographies = ["Region"].concat(countyOrder)
+```
+
+```{ojs}
+//| output: false
+decades = Array.from(new Set(trendData.map(d => d.decade))).sort()
+```
+
+```{ojs}
+//| output: false
+selectedHistory = historyData.filter(d => d.geography === geography)
+```
+
+```{ojs}
+//| output: false
+selectedTrends = trendData.filter(d =>
+  d.geography === geography && selectedTrendlines.includes(d.decade)
+)
+```
+
+## Column
+
+```{ojs}
+//| title: OFM population history with decade trendlines
+Plot.plot({
+  marginLeft: 85,
+  marginRight: 25,
+  x: {label: "Year", domain: [1960, 2060], tickFormat: "d"},
+  y: {label: "Population", grid: true, nice: true},
+  color: {legend: true},
+  marks: [
+    Plot.ruleY([0], {stroke: "#ddd"}),
+    Plot.line(selectedHistory, {
+      x: "year",
+      y: "total_pop",
+      stroke: "OFM history",
+      strokeWidth: 2.6
+    }),
+    showPoints ? Plot.dot(selectedHistory, {
+      x: "year",
+      y: "total_pop",
+      stroke: "OFM history",
+      fill: "white",
+      r: 2.4
+    }) : null,
+    Plot.line(selectedTrends, {
+      x: "year",
+      y: "total_pop",
+      stroke: "decade",
+      strokeDasharray: "6,4",
+      strokeWidth: 1.6
+    }),
+    Plot.tip(
+      selectedHistory,
+      Plot.pointer({x: "year", y: "total_pop", channels: {population: "total_pop"}})
+    )
+  ]
+})
+```
