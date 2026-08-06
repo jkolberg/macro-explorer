@@ -80,14 +80,29 @@ def build_decade_trends(history):
             if len(fit_df) < 2:
                 continue
 
-            slope, intercept = pd.Series(fit_df["total_pop"]).pipe(
-                lambda y: pd.Series(
-                    pd.array([fit_df["year"].cov(y) / fit_df["year"].var(), 0.0], dtype="float64")
-                )
-            )
+            slope = fit_df["year"].cov(fit_df["total_pop"]) / fit_df["year"].var()
             intercept = fit_df["total_pop"].mean() - slope * fit_df["year"].mean()
             trend_years = pd.DataFrame({"year": range(decade_start, 2061)})
             trend_years["total_pop"] = slope * trend_years["year"] + intercept
+            trend_years["geography"] = geography
+            trend_years["decade"] = f"{decade_start}s"
+            rows.append(trend_years)
+    return pd.concat(rows, ignore_index=True)
+
+
+def build_decade_change_trends(history):
+    rows = []
+    for geography, geography_df in history.dropna(subset=["annual_pct_change"]).groupby("geography"):
+        for decade_start in range(1960, 2030, 10):
+            decade_end = min(decade_start + 9, 2026)
+            fit_df = geography_df.query("@decade_start <= year <= @decade_end")
+            if len(fit_df) < 2:
+                continue
+
+            slope = fit_df["year"].cov(fit_df["annual_pct_change"]) / fit_df["year"].var()
+            intercept = fit_df["annual_pct_change"].mean() - slope * fit_df["year"].mean()
+            trend_years = pd.DataFrame({"year": range(decade_start, 2061)})
+            trend_years["annual_pct_change"] = slope * trend_years["year"] + intercept
             trend_years["geography"] = geography
             trend_years["decade"] = f"{decade_start}s"
             rows.append(trend_years)
@@ -103,11 +118,13 @@ history = pd.concat(
     [county_df.drop(columns="county_id"), build_region(county_df)],
     ignore_index=True,
 ).sort_values(["geography", "year"])
+history["annual_pct_change"] = history.groupby("geography")["total_pop"].pct_change() * 100
 history["series"] = "OFM population"
 
 trends = build_decade_trends(history)
+change_trends = build_decade_change_trends(history)
 
-ojs_define(history=history, trends=trends)
+ojs_define(history=history, trends=trends, change_trends=change_trends)
 ```
 
 # Dashboard
@@ -116,6 +133,10 @@ ojs_define(history=history, trends=trends)
 
 ```{ojs}
 viewof geography = Inputs.radio(geographies, {label: "Geography", value: "Region"})
+```
+
+```{ojs}
+viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", format: d => metricLabels[d]})
 ```
 
 ```{ojs}
@@ -138,6 +159,11 @@ trendData = transpose(trends)
 
 ```{ojs}
 //| output: false
+changeTrendData = transpose(change_trends)
+```
+
+```{ojs}
+//| output: false
 countyOrder = ["King County", "Kitsap County", "Pierce County", "Snohomish County"]
 ```
 
@@ -153,14 +179,34 @@ decades = Array.from(new Set(trendData.map(d => d.decade))).sort()
 
 ```{ojs}
 //| output: false
-selectedHistory = historyData.filter(d => d.geography === geography)
+metrics = ["total_pop", "annual_pct_change"]
 ```
 
 ```{ojs}
 //| output: false
-selectedTrends = trendData.filter(d =>
-  d.geography === geography && selectedTrendlines.includes(d.decade)
+metricLabels = {
+  return {
+    total_pop: "Population",
+    annual_pct_change: "% Annual Change"
+  };
+}
+```
+
+```{ojs}
+//| output: false
+selectedHistory = historyData.filter(d => d.geography === geography && d[metric] != null)
+```
+
+```{ojs}
+//| output: false
+selectedTrends = (metric === "total_pop" ? trendData : changeTrendData).filter(d =>
+  d.geography === geography && selectedTrendlines.includes(d.decade) && d[metric] != null
 )
+```
+
+```{ojs}
+//| output: false
+yFormat = metric === "annual_pct_change" ? d => `${d.toFixed(1)}%` : undefined
 ```
 
 ## Column
@@ -171,33 +217,33 @@ Plot.plot({
   marginLeft: 85,
   marginRight: 25,
   x: {label: "Year", domain: [1960, 2060], tickFormat: "d"},
-  y: {label: "Population", grid: true, nice: true},
+  y: {label: metricLabels[metric], grid: true, nice: true, tickFormat: yFormat},
   color: {legend: true},
   marks: [
     Plot.ruleY([0], {stroke: "#ddd"}),
     Plot.line(selectedHistory, {
       x: "year",
-      y: "total_pop",
+      y: metric,
       stroke: "series",
       strokeWidth: 2.6
     }),
     showPoints ? Plot.dot(selectedHistory, {
       x: "year",
-      y: "total_pop",
+      y: metric,
       stroke: "series",
       fill: "white",
       r: 2.4
     }) : null,
     Plot.line(selectedTrends, {
       x: "year",
-      y: "total_pop",
+      y: metric,
       stroke: "decade",
       strokeDasharray: "6,4",
       strokeWidth: 1.6
     }),
     Plot.tip(
       selectedHistory,
-      Plot.pointer({x: "year", y: "total_pop", channels: {population: "total_pop"}})
+      Plot.pointer({x: "year", y: metric, channels: {value: metric}})
     )
   ]
 })
