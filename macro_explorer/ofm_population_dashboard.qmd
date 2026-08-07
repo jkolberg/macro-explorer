@@ -75,7 +75,7 @@ def build_trend_windows(max_year):
     """Decade windows (1960s, 1970s, ...) plus rolling last-N-year windows, all fit
     through max_year and extrapolated out to 2060."""
     windows = [(f"{decade_start}s", decade_start, min(decade_start + 9, max_year)) for decade_start in range(1960, 2030, 10)]
-    windows += [(f"Last {n} Years", max_year - n + 1, max_year) for n in (10, 20, 30)]
+    windows += [(f"Last {n} Years", max_year - n + 1, max_year) for n in (10, 20, 30, 45)]
     return windows
 
 
