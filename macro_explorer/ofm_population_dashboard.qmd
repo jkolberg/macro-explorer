@@ -71,40 +71,30 @@ def build_region(county_df):
     return region
 
 
-def build_decade_trends(history):
+def build_trend_windows(max_year):
+    """Decade windows (1960s, 1970s, ...) plus rolling last-N-year windows, all fit
+    through max_year and extrapolated out to 2060."""
+    windows = [(f"{decade_start}s", decade_start, min(decade_start + 9, max_year)) for decade_start in range(1960, 2030, 10)]
+    windows += [(f"Last {n} Years", max_year - n + 1, max_year) for n in (10, 20, 30)]
+    return windows
+
+
+def build_trends(history, value_col):
+    max_year = int(history["year"].max())
+    windows = build_trend_windows(max_year)
     rows = []
-    for geography, geography_df in history.groupby("geography"):
-        for decade_start in range(1960, 2030, 10):
-            decade_end = min(decade_start + 9, 2026)
-            fit_df = geography_df.query("@decade_start <= year <= @decade_end")
+    for geography, geography_df in history.dropna(subset=[value_col]).groupby("geography"):
+        for label, start_year, end_year in windows:
+            fit_df = geography_df.query("@start_year <= year <= @end_year")
             if len(fit_df) < 2:
                 continue
 
-            slope = fit_df["year"].cov(fit_df["total_pop"]) / fit_df["year"].var()
-            intercept = fit_df["total_pop"].mean() - slope * fit_df["year"].mean()
-            trend_years = pd.DataFrame({"year": range(decade_start, 2061)})
-            trend_years["total_pop"] = slope * trend_years["year"] + intercept
+            slope = fit_df["year"].cov(fit_df[value_col]) / fit_df["year"].var()
+            intercept = fit_df[value_col].mean() - slope * fit_df["year"].mean()
+            trend_years = pd.DataFrame({"year": range(start_year, 2061)})
+            trend_years[value_col] = slope * trend_years["year"] + intercept
             trend_years["geography"] = geography
-            trend_years["decade"] = f"{decade_start}s"
-            rows.append(trend_years)
-    return pd.concat(rows, ignore_index=True)
-
-
-def build_decade_change_trends(history):
-    rows = []
-    for geography, geography_df in history.dropna(subset=["annual_pct_change"]).groupby("geography"):
-        for decade_start in range(1960, 2030, 10):
-            decade_end = min(decade_start + 9, 2026)
-            fit_df = geography_df.query("@decade_start <= year <= @decade_end")
-            if len(fit_df) < 2:
-                continue
-
-            slope = fit_df["year"].cov(fit_df["annual_pct_change"]) / fit_df["year"].var()
-            intercept = fit_df["annual_pct_change"].mean() - slope * fit_df["year"].mean()
-            trend_years = pd.DataFrame({"year": range(decade_start, 2061)})
-            trend_years["annual_pct_change"] = slope * trend_years["year"] + intercept
-            trend_years["geography"] = geography
-            trend_years["decade"] = f"{decade_start}s"
+            trend_years["trend"] = label
             rows.append(trend_years)
     return pd.concat(rows, ignore_index=True)
 
@@ -121,8 +111,8 @@ history = pd.concat(
 history["annual_pct_change"] = history.groupby("geography")["total_pop"].pct_change() * 100
 history["series"] = "OFM population"
 
-trends = build_decade_trends(history)
-change_trends = build_decade_change_trends(history)
+trends = build_trends(history, "total_pop")
+change_trends = build_trends(history, "annual_pct_change")
 
 ojs_define(history=history, trends=trends, change_trends=change_trends)
 ```
@@ -140,7 +130,7 @@ viewof metric = Inputs.select(metrics, {label: "Metric", value: "total_pop", for
 ```
 
 ```{ojs}
-viewof selectedTrendlines = Inputs.checkbox(decades, {label: "Trendlines", value: ["2020s"]})
+viewof selectedTrendlines = Inputs.checkbox(trendlineOptions, {label: "Trendlines", value: ["2020s"]})
 ```
 
 ```{ojs}
@@ -174,7 +164,7 @@ geographies = ["Region"].concat(countyOrder)
 
 ```{ojs}
 //| output: false
-decades = Array.from(new Set(trendData.map(d => d.decade))).sort()
+trendlineOptions = Array.from(new Set(trendData.map(d => d.trend))).sort()
 ```
 
 ```{ojs}
@@ -200,7 +190,7 @@ selectedHistory = historyData.filter(d => d.geography === geography && d[metric]
 ```{ojs}
 //| output: false
 selectedTrends = (metric === "total_pop" ? trendData : changeTrendData).filter(d =>
-  d.geography === geography && selectedTrendlines.includes(d.decade) && d[metric] != null
+  d.geography === geography && selectedTrendlines.includes(d.trend) && d[metric] != null
 )
 ```
 
@@ -237,7 +227,7 @@ Plot.plot({
     Plot.line(selectedTrends, {
       x: "year",
       y: metric,
-      stroke: "decade",
+      stroke: "trend",
       strokeDasharray: "6,4",
       strokeWidth: 1.6
     }),
