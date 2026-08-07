@@ -99,6 +99,35 @@ def build_trends(history, value_col):
     return pd.concat(rows, ignore_index=True)
 
 
+def clean_luvit_pop(cfg, file_path):
+    """Total population rows from the LUVit forecast, in whole persons."""
+    df = pd.read_csv(file_path)
+    df = df.loc[df["Detailed Measure"] == "Total Population"].copy()
+    df["county_id"] = df["Region"].map(cfg["county_map"])
+    df = df.loc[df["county_id"].notna()].copy()
+    year_cols = [c for c in df.columns if str(c)[:4].isdigit()]
+    long = df.melt(id_vars="county_id", value_vars=year_cols, var_name="year", value_name="total_pop")
+    long["year"] = long["year"].astype(int)
+    long["total_pop"] = (long["total_pop"].astype(float) * 1000).round(0).astype(int)
+    return long
+
+
+def clean_remi_v33(cfg, file_path):
+    df = pd.read_csv(file_path)
+    df = df.loc[df["name"] == "REMI_v3.3", ["county_id", "year", "total_pop"]].copy()
+    return df.loc[df["year"] > cfg["remi_base_year"]]
+
+
+def build_forecast_series(county_forecast_df, series_name):
+    """County + region rows for one forecast source, labeled for the toggle/legend."""
+    county_forecast_df = county_forecast_df.loc[county_forecast_df["county_id"].isin(COUNTY_IDS)].copy()
+    region = build_region(county_forecast_df)
+    county_forecast_df["geography"] = county_forecast_df["county_id"].map(ID_TO_COUNTY)
+    combined = pd.concat([county_forecast_df.drop(columns="county_id"), region], ignore_index=True)
+    combined["series"] = series_name
+    return combined
+
+
 ofm = clean_ofm(cfg, os.path.join(cfg["data_dir"], cfg["ofm_population_file"]))
 county_df = ofm[ofm["county_id"].isin(COUNTY_IDS)].copy()
 county_df["geography"] = county_df["county_id"].map(ID_TO_COUNTY)
@@ -111,10 +140,22 @@ history = pd.concat(
 history["annual_pct_change"] = history.groupby("geography")["total_pop"].pct_change() * 100
 history["series"] = "OFM population"
 
+# Forecasts (toggleable; OFM history above is always shown).
+luvit = clean_luvit_pop(cfg, os.path.join(cfg["data_dir"], cfg["luvit_forecast_file"]))
+remi_v33 = clean_remi_v33(cfg, os.path.join(cfg["data_dir"], cfg["remi_output_file"]))
+
+forecasts = pd.concat(
+    [build_forecast_series(luvit, "LUVit"), build_forecast_series(remi_v33, "REMI v3.3")],
+    ignore_index=True,
+).sort_values(["series", "geography", "year"])
+forecasts["annual_pct_change"] = forecasts.groupby(["series", "geography"])["total_pop"].pct_change() * 100
+
+plot_data = pd.concat([history, forecasts], ignore_index=True)
+
 trends = build_trends(history, "total_pop")
 change_trends = build_trends(history, "annual_pct_change")
 
-ojs_define(history=history, trends=trends, change_trends=change_trends)
+ojs_define(history=plot_data, trends=trends, change_trends=change_trends)
 ```
 
 # Dashboard
@@ -134,12 +175,16 @@ viewof selectedTrendlines = Inputs.checkbox(trendlineOptions, {label: "Trendline
 ```
 
 ```{ojs}
+viewof selectedForecasts = Inputs.checkbox(["LUVit", "REMI v3.3"], {label: "Forecasts", value: ["LUVit", "REMI v3.3"]})
+```
+
+```{ojs}
 viewof showPoints = Inputs.toggle({label: "Show annual points", value: true})
 ```
 
 ```{ojs}
 //| output: false
-historyData = transpose(history)
+seriesData = transpose(history)
 ```
 
 ```{ojs}
@@ -184,7 +229,11 @@ metricLabels = {
 
 ```{ojs}
 //| output: false
-selectedHistory = historyData.filter(d => d.geography === geography && d[metric] != null)
+selectedSeries = seriesData.filter(d =>
+  d.geography === geography &&
+  d[metric] != null &&
+  (d.series === "OFM population" || selectedForecasts.includes(d.series))
+)
 ```
 
 ```{ojs}
@@ -202,7 +251,7 @@ yFormat = metric === "annual_pct_change" ? d => `${d.toFixed(1)}%` : undefined
 ## Column
 
 ```{ojs}
-//| title: OFM population history with decade trendlines
+//| title: OFM population history, forecasts, and decade trendlines
 Plot.plot({
   marginLeft: 85,
   marginRight: 25,
@@ -211,13 +260,13 @@ Plot.plot({
   color: {legend: true},
   marks: [
     Plot.ruleY([0], {stroke: "#ddd"}),
-    Plot.line(selectedHistory, {
+    Plot.line(selectedSeries, {
       x: "year",
       y: metric,
       stroke: "series",
       strokeWidth: 2.6
     }),
-    showPoints ? Plot.dot(selectedHistory, {
+    showPoints ? Plot.dot(selectedSeries, {
       x: "year",
       y: metric,
       stroke: "series",
@@ -232,7 +281,7 @@ Plot.plot({
       strokeWidth: 1.6
     }),
     Plot.tip(
-      selectedHistory,
+      selectedSeries,
       Plot.pointer({x: "year", y: metric, channels: {value: metric}})
     )
   ]
