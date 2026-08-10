@@ -45,6 +45,8 @@ remi_forecasts:
     filename: REMI_OFM_v2022_Medium.xlsx
   - name: REMI_v3.3
     filename: REMI_v3.3.xlsx
+  - name: REMI_v3.4
+    filename: REMI_v3.4.xlsx
   # - name: REMI_Scenario_Zero_Intl_Mig
   #   filename: REMI_v3.3_zero_intl_migration.xlsx
   # - name: REMI_Scenario_Amzn_+50%
@@ -99,7 +101,7 @@ woods_poole_files:
 bayes_pop_file: bayes_pop_forecast.csv
 
 steps:
-  - macro_explorer.steps.get_decennial_data
-  - macro_explorer.steps.get_acs_data
+  # - macro_explorer.steps.get_decennial_data
+  # - macro_explorer.steps.get_acs_data
   - macro_explorer.steps.get_remi_hh_units
-  # - macro_explorer.steps.render_dashboard
+  - macro_explorer.steps.render_dashboard
