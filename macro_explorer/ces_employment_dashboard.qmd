@@ -203,7 +203,7 @@ cagrFiltered = cagrData.filter(d => d.sector === cagrSector)
 Plot.plot({
   marginLeft: 60,
   y: {label: "Annual growth rate", tickFormat: "%", grid: true},
-  x: {label: null},
+  x: {axis: null},
   fx: {label: "Decade", tickFormat: d => `${d}s`},
   color: {legend: true},
   marks: [
@@ -222,6 +222,7 @@ cagr_table.style.format("{:.1%}")
 
 # Notes
 
+- **Source**: Bureau of Labor Statistics Current Employment Survey (CES)
 - **National**: U.S. total nonfarm employment by CES supersector.
 - **Regional**: Combined CES employment for the Bremerton-Seattle CES region, summed across constituent metro divisions.
 - **Total nonfarm** is an aggregate of the other sectors, so it's excluded from the sector breakdown and growth rate table.
