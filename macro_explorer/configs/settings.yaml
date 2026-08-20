@@ -53,8 +53,8 @@ remi_forecasts:
   - name: REMI_v3.4_High
     filename: REMI_v3.4_High.xlsx
     headship_rate_year: 2020
-  # - name: REMI_Scenario_Zero_Intl_Mig
-  #   filename: REMI_v3.3_zero_intl_migration.xlsx
+  - name: REMI_Scenario_Zero_Intl_Mig
+    filename: REMI_v3.4_zero_intl_migration.xlsx
   # - name: REMI_Scenario_Amzn_+50%
   #   filename: REMI_v3.3_amzn_grows_50_pct.xlsx
 
@@ -107,6 +107,17 @@ bayes_pop_file: bayes_pop_forecast.csv
 
 ces_emp_region_file: ces_bremerton_seattle.xlsx
 ces_us_file: ces_usa.xlsx
+
+remi_migration_dir: J:/Projects/Forecasts/_Regional/2026/REMI/Migration
+remi_migration_files:
+  - name: Low
+    filename: REMI_v3.4_Low.xlsx
+  - name: High
+    filename: REMI_v3.4_High.xlsx
+  - name: v.3.4
+    filename: REMI_v3.4.xlsx
+  - name: Zero_Intl_Mig
+    filename: REMI_v3.4_Zero_Intl.xlsx
 
 steps:
   # - macro_explorer.steps.get_decennial_data

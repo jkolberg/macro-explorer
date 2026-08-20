@@ -6,9 +6,9 @@ format:
     theme: cosmo
     output-file: index.html
     nav-buttons:
-      - icon: file-earmark-text
-        href: remi_story.html
-        aria-label: "REMI Story"
+      - icon: arrow-left-right
+        href: migration_dashboard.html
+        aria-label: "Migration Forecasts"
 ---
 
 ```{python}
@@ -357,8 +357,6 @@ ojs_define(data=combined)
 
 ## {.sidebar width="320px"}
 
-[📊 Read the REMI Story ➡](remi_story.html)
-
 ```{ojs}
 viewof geography = Inputs.radio(geographies, {label: "Geography", value: "Region"})
 ```
@@ -565,3 +563,25 @@ Plot.plot({
 
 - **Growth Targets v2021**: Population Targets, only King county included housing targets
 - **Growth Targets v2026**: Recently updated growth targets, now all include housing targets
+
+# Links
+
+## Row
+
+::: {.card title="OFM Population History"}
+Historical OFM population estimates by county, 1960-present.
+
+[Open dashboard →](ofm_population_dashboard.html)
+:::
+
+::: {.card title="Net Migration Forecasts"}
+REMI net migration history and scenario forecasts.
+
+[Open dashboard →](migration_dashboard.html)
+:::
+
+::: {.card title="REMI Story"}
+Narrative summary of the REMI population forecast.
+
+[Read the story →](remi_story.html)
+:::

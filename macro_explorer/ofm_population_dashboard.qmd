@@ -9,6 +9,9 @@ format:
       - icon: bar-chart-line
         href: index.html
         aria-label: "Forecast Explorer"
+      - icon: arrow-left-right
+        href: migration_dashboard.html
+        aria-label: "Migration Forecasts"
 ---
 
 ```{python}
@@ -287,3 +290,25 @@ Plot.plot({
   ]
 })
 ```
+
+# Links
+
+## Row
+
+::: {.card title="OFM Population History"}
+Historical OFM population estimates by county, 1960-present.
+
+[Open dashboard →](ofm_population_dashboard.html)
+:::
+
+::: {.card title="Net Migration Forecasts"}
+REMI net migration history and scenario forecasts.
+
+[Open dashboard →](migration_dashboard.html)
+:::
+
+::: {.card title="REMI Story"}
+Narrative summary of the REMI population forecast.
+
+[Read the story →](remi_story.html)
+:::
