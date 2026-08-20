@@ -67,9 +67,8 @@ prev_ofm_forcasts:
     filename: gma2002_med.xls
 
 remi_output_file: REMI_forecasts_counties_summed_all_years.csv
-remi_base_year: 2023
+remi_base_year: 2024
 remi_history_file: REMI_History.xlsx
-headship_rate_year: 2020
 
 luvit_forecast_file: luvit.csv
 
