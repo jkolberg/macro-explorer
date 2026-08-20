@@ -52,6 +52,8 @@ def ces_to_long(df, id_col="Series ID"):
     # last 10 chars of the Series ID are <8-digit sector code><2-digit data type code>
     long_df["sector"] = long_df[id_col].str[-10:-2].map(SECTORS)
     long_df = long_df.dropna(subset=["sector", "employment"])
+    # source data is reported in thousands of jobs
+    long_df["employment"] = long_df["employment"] * 1000
     # combine sector codes that map to the same label (e.g. historical vs. current
     # supersector splits) and, for regional data, sum across the constituent areas
     return long_df.groupby(["sector", "year"], as_index=False)["employment"].sum()
@@ -92,7 +94,7 @@ cagr_all = pd.concat([cagr_us, cagr_region], ignore_index=True)
 cagr_all = cagr_all[cagr_all["sector"] != "Total nonfarm"]
 cagr_table = cagr_all.pivot_table(index="sector", columns=["geography", "decade"], values="cagr")
 
-ojs_define(employment=employment)
+ojs_define(employment=employment, cagrAll=cagr_all)
 ```
 
 # Dashboard
@@ -165,6 +167,48 @@ Plot.plot({
       filtered,
       Plot.pointer({x: "year", y: "employment", stroke: "sector"})
     )
+  ]
+})
+```
+
+# Growth Rate Comparison
+
+## {.sidebar width="280px"}
+
+```{ojs}
+viewof cagrSector = Inputs.select(cagrSectorNames, {label: "Sector", value: cagrSectorNames[0]})
+```
+
+<!-- Hidden helper definitions (no cards). -->
+
+```{ojs}
+//| output: false
+cagrData = transpose(cagrAll)
+```
+
+```{ojs}
+//| output: false
+cagrSectorNames = Array.from(new Set(cagrData.map(d => d.sector))).sort()
+```
+
+```{ojs}
+//| output: false
+cagrFiltered = cagrData.filter(d => d.sector === cagrSector)
+```
+
+## Column
+
+```{ojs}
+//| title: Annual growth rate by decade, regional vs. national
+Plot.plot({
+  marginLeft: 60,
+  y: {label: "Annual growth rate", tickFormat: "%", grid: true},
+  x: {label: null},
+  fx: {label: "Decade", tickFormat: d => `${d}s`},
+  color: {legend: true},
+  marks: [
+    Plot.ruleY([0]),
+    Plot.barY(cagrFiltered, {x: "geography", y: "cagr", fx: "decade", fill: "geography"})
   ]
 })
 ```
