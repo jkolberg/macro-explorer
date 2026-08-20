@@ -1,0 +1,212 @@
+---
+title: "CES Employment"
+format:
+  dashboard:
+    embed-resources: true
+    theme: cosmo
+    output-file: ces_employment_dashboard.html
+    nav-buttons:
+      - icon: bar-chart-line
+        href: index.html
+        aria-label: "Forecast Explorer"
+      - icon: arrow-left-right
+        href: migration_dashboard.html
+        aria-label: "Migration Forecasts"
+      - icon: house
+        href: ofm_population_dashboard.html
+        aria-label: "OFM Population History"
+---
+
+```{python}
+#| output: false
+import os
+
+import pandas as pd
+import yaml
+
+cfg = yaml.safe_load(open("configs/settings.yaml"))
+
+SECTORS = {
+    "00000000": "Total nonfarm",
+    "10000000": "Mining, Logging, and Construction",
+    "15000000": "Mining, Logging, and Construction",
+    "20000000": "Mining, Logging, and Construction",
+    "30000000": "Manufacturing",
+    "40000000": "Trade, Transportation, and Utilities",
+    "50000000": "Information",
+    "55000000": "Financial Activities",
+    "60000000": "Professional and Business Services",
+    "65000000": "Private Education and Health Services",
+    "70000000": "Leisure and Hospitality",
+    "80000000": "Other Services",
+    "90000000": "Government",
+}
+
+
+def ces_to_long(df, id_col="Series ID"):
+    """Reshape a BLS CES workbook (one row per series, one column per year) into
+    a [sector, year, employment] frame, keyed off the sector code embedded in
+    the Series ID."""
+    long_df = df.melt(id_vars=[id_col], var_name="year", value_name="employment")
+    long_df["year"] = long_df["year"].str.extract(r"(\d{4})").astype(int)
+    # last 10 chars of the Series ID are <8-digit sector code><2-digit data type code>
+    long_df["sector"] = long_df[id_col].str[-10:-2].map(SECTORS)
+    long_df = long_df.dropna(subset=["sector", "employment"])
+    # combine sector codes that map to the same label (e.g. historical vs. current
+    # supersector splits) and, for regional data, sum across the constituent areas
+    return long_df.groupby(["sector", "year"], as_index=False)["employment"].sum()
+
+
+def decade_cagr(df):
+    """Compound annual growth rate for each sector, by decade (the 2020s figure
+    covers fewer than 10 years since that decade isn't complete yet)."""
+    d = df.copy()
+    d["decade"] = (d["year"] // 10) * 10
+    rows = []
+    for (sector, decade), g in d.groupby(["sector", "decade"]):
+        g = g.sort_values("year")
+        start_year, end_year = g["year"].iloc[0], g["year"].iloc[-1]
+        start_val, end_val = g["employment"].iloc[0], g["employment"].iloc[-1]
+        n_years = end_year - start_year
+        if n_years == 0:
+            continue
+        cagr = (end_val / start_val) ** (1 / n_years) - 1
+        rows.append({"sector": sector, "decade": decade, "cagr": cagr})
+    return pd.DataFrame(rows)
+
+
+us = pd.read_excel(os.path.join(cfg["data_dir"], cfg["ces_us_file"]), skiprows=3)
+region = pd.read_excel(os.path.join(cfg["data_dir"], cfg["ces_emp_region_file"]), skiprows=3)
+
+us_long = ces_to_long(us).assign(geography="National")
+region_long = ces_to_long(region).assign(geography="Regional")
+
+# Total nonfarm is an aggregate of the other sectors, not a peer sector, so it's
+# excluded from the sector breakdown and CAGR table.
+employment = pd.concat([us_long, region_long], ignore_index=True)
+employment = employment[employment["sector"] != "Total nonfarm"]
+
+cagr_us = decade_cagr(us_long).assign(geography="National")
+cagr_region = decade_cagr(region_long).assign(geography="Regional")
+cagr_all = pd.concat([cagr_us, cagr_region], ignore_index=True)
+cagr_all = cagr_all[cagr_all["sector"] != "Total nonfarm"]
+cagr_table = cagr_all.pivot_table(index="sector", columns=["geography", "decade"], values="cagr")
+
+ojs_define(employment=employment)
+```
+
+# Dashboard
+
+## {.sidebar width="280px"}
+
+```{ojs}
+viewof geography = Inputs.radio(["Regional", "National"], {label: "Geography", value: "Regional"})
+```
+
+```{ojs}
+viewof selectedSectors = Inputs.checkbox(sectorNames, {label: "Sectors", value: sectorNames})
+```
+
+```{ojs}
+viewof yearFrom = Inputs.range([minYear, maxYear], {label: "Start Year", step: 1, value: minYear})
+```
+
+```{ojs}
+viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 1, value: maxYear})
+```
+
+<!-- Hidden helper definitions (no cards). -->
+
+```{ojs}
+//| output: false
+allData = transpose(employment)
+```
+
+```{ojs}
+//| output: false
+sectorNames = Array.from(new Set(allData.map(d => d.sector))).sort()
+```
+
+```{ojs}
+//| output: false
+minYear = d3.min(allData, d => d.year)
+```
+
+```{ojs}
+//| output: false
+maxYear = d3.max(allData, d => d.year)
+```
+
+```{ojs}
+//| output: false
+filtered = allData.filter(d =>
+  d.geography === geography &&
+  selectedSectors.includes(d.sector) &&
+  d.year >= yearFrom &&
+  d.year <= yearTo
+)
+```
+
+## Column
+
+```{ojs}
+//| title: Employment by sector over time
+Plot.plot({
+  marginLeft: 70,
+  marginRight: 20,
+  x: {label: "Year", tickFormat: "d"},
+  y: {label: "Employment", grid: true, nice: true},
+  color: {legend: true},
+  marks: [
+    Plot.ruleY([0], {stroke: "#ddd"}),
+    Plot.line(filtered, {x: "year", y: "employment", stroke: "sector", strokeWidth: 1.8}),
+    Plot.dot(filtered, {x: "year", y: "employment", stroke: "sector", fill: "white", r: 2.2}),
+    Plot.tip(
+      filtered,
+      Plot.pointer({x: "year", y: "employment", stroke: "sector"})
+    )
+  ]
+})
+```
+
+## Row {height="35%"}
+
+```{python}
+#| title: Compound annual growth rate by decade
+cagr_table.style.format("{:.1%}")
+```
+
+# Notes
+
+- **National**: U.S. total nonfarm employment by CES supersector.
+- **Regional**: Combined CES employment for the Bremerton-Seattle CES region, summed across constituent metro divisions.
+- **Total nonfarm** is an aggregate of the other sectors, so it's excluded from the sector breakdown and CAGR table.
+- CAGR by decade is measured from the first to last available year within each decade, so the 2020s figure reflects fewer than 10 years.
+
+# Links
+
+## Row
+
+::: {.card title="Forecast Explorer"}
+Interactive population and housing forecast explorer.
+
+[Open dashboard →](index.html)
+:::
+
+::: {.card title="OFM Population History"}
+Historical OFM population estimates by county, 1960-present.
+
+[Open dashboard →](ofm_population_dashboard.html)
+:::
+
+::: {.card title="Net Migration Forecasts"}
+REMI net migration history and scenario forecasts.
+
+[Open dashboard →](migration_dashboard.html)
+:::
+
+::: {.card title="REMI Story"}
+Narrative summary of the REMI population forecast.
+
+[Read the story →](remi_story.html)
+:::

@@ -9,6 +9,9 @@ format:
       - icon: arrow-left-right
         href: migration_dashboard.html
         aria-label: "Migration Forecasts"
+      - icon: briefcase
+        href: ces_employment_dashboard.html
+        aria-label: "CES Employment"
 ---
 
 ```{python}
@@ -578,6 +581,12 @@ Historical OFM population estimates by county, 1960-present.
 REMI net migration history and scenario forecasts.
 
 [Open dashboard →](migration_dashboard.html)
+:::
+
+::: {.card title="CES Employment"}
+CES employment history by sector, national and regional.
+
+[Open dashboard →](ces_employment_dashboard.html)
 :::
 
 ::: {.card title="REMI Story"}
