@@ -157,7 +157,11 @@ period_avg_table.style.format("{:,.0f}", na_rep="")
 # Notes
 
 - **History**: historical net migration input to the REMI economic model, identical across all scenarios through `{python} remi_base_year`.
-- Scenario forecasts (**Low**, **High**, **v.3.4**, **Zero_Intl_Mig**, etc.) come from the REMI migration workbooks configured in `remi_migration_files` and diverge starting the year after the base year.
+- Scenario forecasts:
+  - **v.3.4**: Default REMI forecast released August 2026
+  - **Low**: Uses the "Census Low" international migration scenario
+  - **High** Uses the "Census High" international migration scenario
+  - **Zero_Intl_Mig**: Assumes zero international migration
 
 # Links
 
