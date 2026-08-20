@@ -222,9 +222,9 @@ cagr_table.style.format("{:.1%}")
 
 # Notes
 
-- **Source**: Bureau of Labor Statistics Current Employment Survey (CES)
+- **Source**: Bureau of Labor Statistics Current Employment Statistics (CES)
 - **National**: U.S. total nonfarm employment by CES supersector.
-- **Regional**: Combined CES employment for the Bremerton-Seattle CES region, summed across constituent metro divisions.
+- **Regional**: Combined CES employment for the Seattle and Bremerton MSA's.
 - **Total nonfarm** is an aggregate of the other sectors, so it's excluded from the sector breakdown and growth rate table.
 - **Annual growth rate** is the compound annual growth rate (CAGR): the constant yearly rate that would grow employment from its first to its last available value within each decade, calculated as $(\text{end value} / \text{start value})^{1 / \text{years}} - 1$. The 2020s figure reflects fewer than 10 years since that decade isn't complete yet.
 
