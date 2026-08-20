@@ -47,6 +47,12 @@ remi_forecasts:
     filename: REMI_v3.3.xlsx
   - name: REMI_v3.4
     filename: REMI_v3.4.xlsx
+  - name: REMI_v3.4_Low
+    filename: REMI_v3.4_Low.xlsx
+    headship_rate_year: 2020
+  - name: REMI_v3.4_High
+    filename: REMI_v3.4_High.xlsx
+    headship_rate_year: 2020
   # - name: REMI_Scenario_Zero_Intl_Mig
   #   filename: REMI_v3.3_zero_intl_migration.xlsx
   # - name: REMI_Scenario_Amzn_+50%
