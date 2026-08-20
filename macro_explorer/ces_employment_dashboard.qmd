@@ -58,7 +58,7 @@ def ces_to_long(df, id_col="Series ID"):
 
 
 def decade_cagr(df):
-    """Compound annual growth rate for each sector, by decade (the 2020s figure
+    """Annual growth rate for each sector, by decade (the 2020s figure
     covers fewer than 10 years since that decade isn't complete yet)."""
     d = df.copy()
     d["decade"] = (d["year"] // 10) * 10
@@ -82,7 +82,7 @@ us_long = ces_to_long(us).assign(geography="National")
 region_long = ces_to_long(region).assign(geography="Regional")
 
 # Total nonfarm is an aggregate of the other sectors, not a peer sector, so it's
-# excluded from the sector breakdown and CAGR table.
+# excluded from the sector breakdown and growth rate table.
 employment = pd.concat([us_long, region_long], ignore_index=True)
 employment = employment[employment["sector"] != "Total nonfarm"]
 
@@ -172,7 +172,7 @@ Plot.plot({
 ## Row {height="35%"}
 
 ```{python}
-#| title: Compound annual growth rate by decade
+#| title: Annual growth rate by decade
 cagr_table.style.format("{:.1%}")
 ```
 
@@ -180,8 +180,8 @@ cagr_table.style.format("{:.1%}")
 
 - **National**: U.S. total nonfarm employment by CES supersector.
 - **Regional**: Combined CES employment for the Bremerton-Seattle CES region, summed across constituent metro divisions.
-- **Total nonfarm** is an aggregate of the other sectors, so it's excluded from the sector breakdown and CAGR table.
-- CAGR by decade is measured from the first to last available year within each decade, so the 2020s figure reflects fewer than 10 years.
+- **Total nonfarm** is an aggregate of the other sectors, so it's excluded from the sector breakdown and growth rate table.
+- **Annual growth rate** is the compound annual growth rate (CAGR): the constant yearly rate that would grow employment from its first to its last available value within each decade, calculated as $(\text{end value} / \text{start value})^{1 / \text{years}} - 1$. The 2020s figure reflects fewer than 10 years since that decade isn't complete yet.
 
 # Links
 
