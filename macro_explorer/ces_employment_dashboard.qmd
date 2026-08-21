@@ -10,8 +10,8 @@ format:
         href: index.html
         aria-label: "Forecast Explorer"
       - icon: arrow-left-right
-        href: migration_dashboard.html
-        aria-label: "Migration Forecasts"
+        href: components_dashboard.html
+        aria-label: "Migration & Natural Growth"
       - icon: house
         href: ofm_population_dashboard.html
         aria-label: "OFM Population History"
@@ -244,10 +244,10 @@ Historical OFM population estimates by county, 1960-present.
 [Open dashboard →](ofm_population_dashboard.html)
 :::
 
-::: {.card title="Net Migration Forecasts"}
-REMI net migration history and scenario forecasts.
+::: {.card title="Migration & Natural Growth"}
+REMI migration and natural increase history and scenario forecasts, by county.
 
-[Open dashboard →](migration_dashboard.html)
+[Open dashboard →](components_dashboard.html)
 :::
 
 ::: {.card title="REMI Story"}

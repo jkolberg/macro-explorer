@@ -1,0 +1,245 @@
+---
+title: "Migration & Natural Growth"
+format:
+  dashboard:
+    embed-resources: true
+    theme: cosmo
+    output-file: components_dashboard.html
+    nav-buttons:
+      - icon: bar-chart-line
+        href: index.html
+        aria-label: "Forecast Explorer"
+      - icon: house
+        href: ofm_population_dashboard.html
+        aria-label: "OFM Population History"
+      - icon: briefcase
+        href: ces_employment_dashboard.html
+        aria-label: "CES Employment"
+---
+
+```{python}
+#| output: false
+import os
+
+import pandas as pd
+import yaml
+
+cfg = yaml.safe_load(open("configs/settings.yaml"))
+
+components_dir = cfg["remi_components_dir"]
+remi_base_year = cfg["remi_base_year"]
+county_map = cfg["county_map"]  # county name -> id
+
+COMPONENT_LABELS = {
+    "Total Migrants - All Races": "Migration",
+    "Natural Growth - All Races": "Natural Increase",
+}
+
+
+def load_remi_components(file_path):
+    """Read a REMI components workbook's Migration and Natural Increase rows
+    by county (in thousands) into a long [region, component, year, value] frame."""
+    df = pd.read_excel(file_path, sheet_name="All", header=5)
+    df = df.rename(columns={df.columns[0]: "region", df.columns[1]: "category"})
+    year_cols = list(df.columns[3:])
+
+    comp = df[df["region"].isin(county_map) & df["category"].isin(COMPONENT_LABELS)].copy()
+    comp["component"] = comp["category"].map(COMPONENT_LABELS)
+
+    long = comp.melt(
+        id_vars=["region", "component"],
+        value_vars=year_cols,
+        var_name="year",
+        value_name="value",
+    )
+    long["year"] = long["year"].astype(int)
+    long["value"] = long["value"].astype(float) * 1000
+    return long
+
+
+comp_frames = []
+for comp_file in cfg["remi_components_files"]:
+    file_path = os.path.join(components_dir, comp_file["filename"])
+    df = load_remi_components(file_path)
+    df["name"] = comp_file["name"]
+    comp_frames.append(df)
+components = pd.concat(comp_frames, ignore_index=True)
+
+# "Region" is the sum of the four counties, computed here rather than relying on a workbook total row.
+region_totals = components.groupby(["name", "component", "year"], as_index=False)["value"].sum()
+region_totals["region"] = "Region"
+components = pd.concat([components, region_totals], ignore_index=True)
+
+scenario_names = [comp_file["name"] for comp_file in cfg["remi_components_files"]]
+
+# History is identical across scenario files through remi_base_year, so keep
+# a single historical series and one forecast series per scenario.
+comp_hist = (
+    components.loc[components["year"] <= remi_base_year]
+    .drop_duplicates(["region", "component", "year"])[["region", "component", "year", "value"]]
+    .assign(name="History")
+)
+comp_forecast = components.loc[components["year"] > remi_base_year]
+comp_all = pd.concat([comp_hist, comp_forecast], ignore_index=True)
+
+# Average annual values by period for the combined region, split at remi_base_year like the plot above.
+periods = [
+    ("2000s", 2001, 2009),
+    ("2010s", 2010, 2019),
+    ("2020s", 2020, 2024),
+    ("2025-2039", 2025, 2039),
+    ("2040-2060", 2040, 2060),
+]
+
+
+def period_avg_table(component):
+    subset = comp_all.loc[(comp_all["region"] == "Region") & (comp_all["component"] == component)]
+    avgs = [
+        subset.loc[(subset["year"] >= start) & (subset["year"] <= end)]
+        .groupby("name")["value"]
+        .mean()
+        .rename(label)
+        for label, start, end in periods
+    ]
+    return pd.concat(avgs, axis=1).T[["History"] + scenario_names]
+
+
+migration_avg_table = period_avg_table("Migration")
+natural_increase_avg_table = period_avg_table("Natural Increase")
+
+ojs_define(data=comp_all, base_year=remi_base_year)
+```
+
+# Dashboard
+
+## {.sidebar width="280px"}
+
+```{ojs}
+viewof yearFrom = Inputs.range([minYear, maxYear], {label: "Start Year", step: 5, value: minYear})
+```
+
+```{ojs}
+viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 5, value: maxYear})
+```
+
+```{ojs}
+viewof selectedScenarios = Inputs.checkbox(scenarioNames, {label: "Scenarios", value: scenarioNames})
+```
+
+```{ojs}
+viewof selectedRegion = Inputs.select(regionNames, {label: "Region", value: "Region"})
+```
+
+<!-- Hidden helper definitions (no cards). -->
+
+```{ojs}
+//| output: false
+allData = transpose(data)
+```
+
+```{ojs}
+//| output: false
+minYear = Math.floor(d3.min(allData, d => d.year) / 5) * 5
+```
+
+```{ojs}
+//| output: false
+maxYear = Math.ceil(d3.max(allData, d => d.year) / 5) * 5
+```
+
+```{ojs}
+//| output: false
+// History always shown; the scenario checkboxes only toggle the forecast bars.
+scenarioNames = Array.from(new Set(allData.map(d => d.name))).filter(n => n !== "History").sort()
+```
+
+```{ojs}
+//| output: false
+// "Region" (sum of counties) plus each individual county, computed in Python.
+regionNames = ["Region", ...Array.from(new Set(allData.map(d => d.region))).filter(n => n !== "Region").sort()]
+```
+
+```{ojs}
+//| output: false
+filtered = allData.filter(d =>
+  d.region === selectedRegion &&
+  (d.name === "History" || selectedScenarios.includes(d.name)) &&
+  d.year >= yearFrom &&
+  d.year <= yearTo
+)
+```
+
+## Column
+
+```{ojs}
+//| title: REMI migration and natural increase - history and forecast scenarios
+Plot.plot({
+  marginLeft: 60,
+  marginRight: 20,
+  x: {label: "Year", tickFormat: "d"},
+  y: {label: "People", grid: true, nice: true},
+  color: {legend: true, domain: ["Migration", "Natural Increase"]},
+  fx: {label: null},
+  marks: [
+    Plot.ruleY([0], {stroke: "#ddd"}),
+    Plot.barY(filtered, {x: "year", y: "value", fill: "component", fx: "name"}),
+    Plot.ruleX([base_year], {stroke: "#999", strokeDasharray: "4,3"}),
+    Plot.tip(
+      filtered,
+      Plot.pointer({x: "year", y: "value", fill: "component"})
+    )
+  ]
+})
+```
+
+## Row {height="30%"}
+
+```{python}
+#| title: Average annual migration by period (Region total)
+migration_avg_table.style.format("{:,.0f}", na_rep="")
+```
+
+```{python}
+#| title: Average annual natural increase by period (Region total)
+natural_increase_avg_table.style.format("{:,.0f}", na_rep="")
+```
+
+# Notes
+
+- **History**: historical values input to the REMI economic model, identical across all scenarios through `{python} remi_base_year`.
+- **Migration**: net migrants (in-migration minus out-migration).
+- **Natural Increase**: births minus deaths.
+- **Region**: sum of King, Kitsap, Pierce, and Snohomish counties; individual counties can also be selected from the sidebar.
+- Scenario forecasts:
+  - **v.3.4**: Default REMI forecast released August 2026
+  - **Low**: Uses the "Census Low" international migration scenario
+  - **High** Uses the "Census High" international migration scenario
+  - **Zero_Intl_Mig**: Assumes zero international migration
+
+# Links
+
+## Row
+
+::: {.card title="OFM Population History"}
+Historical OFM population estimates by county, 1960-present.
+
+[Open dashboard →](ofm_population_dashboard.html)
+:::
+
+::: {.card title="Migration & Natural Growth"}
+REMI migration and natural increase history and scenario forecasts, by county.
+
+[Open dashboard →](components_dashboard.html)
+:::
+
+::: {.card title="CES Employment"}
+CES employment history by sector, national and regional.
+
+[Open dashboard →](ces_employment_dashboard.html)
+:::
+
+::: {.card title="REMI Story"}
+Narrative summary of the REMI population forecast.
+
+[Read the story →](remi_story.html)
+:::

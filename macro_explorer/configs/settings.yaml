@@ -108,8 +108,8 @@ bayes_pop_file: bayes_pop_forecast.csv
 ces_emp_region_file: ces_bremerton_seattle.xlsx
 ces_us_file: ces_usa.xlsx
 
-remi_migration_dir: J:/Projects/Forecasts/_Regional/2026/REMI/Migration
-remi_migration_files:
+remi_components_dir: J:/Projects/Forecasts/_Regional/2026/REMI/Components
+remi_components_files:
   - name: Low
     filename: REMI_v3.4_Low.xlsx
   - name: High
