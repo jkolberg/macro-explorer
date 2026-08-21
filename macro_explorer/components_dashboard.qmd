@@ -123,7 +123,7 @@ viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 5, va
 ```
 
 ```{ojs}
-viewof selectedScenarios = Inputs.checkbox(scenarioNames, {label: "Scenarios", value: scenarioNames})
+viewof selectedScenario = Inputs.radio(scenarioNames, {label: "Scenario", value: scenarioNames[0]})
 ```
 
 ```{ojs}
@@ -149,7 +149,7 @@ maxYear = Math.ceil(d3.max(allData, d => d.year) / 5) * 5
 
 ```{ojs}
 //| output: false
-// History always shown; the scenario checkboxes only toggle the forecast bars.
+// History always shown; the scenario selector toggles which single forecast bar is shown.
 scenarioNames = Array.from(new Set(allData.map(d => d.name))).filter(n => n !== "History").sort()
 ```
 
@@ -163,7 +163,7 @@ regionNames = ["Region", ...Array.from(new Set(allData.map(d => d.region))).filt
 //| output: false
 filtered = allData.filter(d =>
   d.region === selectedRegion &&
-  (d.name === "History" || selectedScenarios.includes(d.name)) &&
+  (d.name === "History" || d.name === selectedScenario) &&
   d.year >= yearFrom &&
   d.year <= yearTo
 )
