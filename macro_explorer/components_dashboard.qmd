@@ -169,6 +169,17 @@ filtered = allData.filter(d =>
 )
 ```
 
+```{ojs}
+//| output: false
+// x is a band scale (one entry per year), so a numeric `ticks` count doesn't thin labels; build an explicit array instead.
+xTickStep = (yearTo - yearFrom) > 40 ? 10 : (yearTo - yearFrom) > 15 ? 5 : 1
+```
+
+```{ojs}
+//| output: false
+xTicks = d3.range(Math.ceil(yearFrom / xTickStep) * xTickStep, yearTo + 1, xTickStep)
+```
+
 ## Column
 
 ```{ojs}
@@ -176,7 +187,7 @@ filtered = allData.filter(d =>
 Plot.plot({
   marginLeft: 60,
   marginRight: 20,
-  x: {label: "Year", tickFormat: "d", ticks: 10},
+  x: {label: "Year", tickFormat: "d", ticks: xTicks},
   y: {label: "People", grid: true, nice: true},
   color: {legend: true, domain: ["Migration", "Natural Increase"]},
   marks: [
