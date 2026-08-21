@@ -176,13 +176,12 @@ filtered = allData.filter(d =>
 Plot.plot({
   marginLeft: 60,
   marginRight: 20,
-  x: {label: "Year", tickFormat: "d"},
+  x: {label: "Year", tickFormat: "d", ticks: 10},
   y: {label: "People", grid: true, nice: true},
   color: {legend: true, domain: ["Migration", "Natural Increase"]},
-  fx: {label: null},
   marks: [
     Plot.ruleY([0], {stroke: "#ddd"}),
-    Plot.barY(filtered, {x: "year", y: "value", fill: "component", fx: "name"}),
+    Plot.barY(filtered, {x: "year", y: "value", fill: "component"}),
     Plot.ruleX([base_year], {stroke: "#999", strokeDasharray: "4,3"}),
     Plot.tip(
       filtered,
