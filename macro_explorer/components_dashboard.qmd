@@ -127,13 +127,13 @@ periods = [
 
 def period_avg_table(component):
     subset = comp_all.loc[(comp_all["region"] == "Region") & (comp_all["component"] == component)]
-    avgs = [
-        subset.loc[(subset["year"] >= start) & (subset["year"] <= end)]
-        .groupby("name")["value"]
-        .mean()
-        .rename(label)
-        for label, start, end in periods
-    ]
+    avgs = []
+    for label, start, end in periods:
+        period_avg = subset.loc[(subset["year"] >= start) & (subset["year"] <= end)].groupby("name")["value"].mean()
+        if label == "2025-2039":
+            # This period is mostly forecast years; History only partially overlaps it, so drop that misleading partial average.
+            period_avg = period_avg.drop("History", errors="ignore")
+        avgs.append(period_avg.rename(label))
     return pd.concat(avgs, axis=1).T[["History"] + scenario_names]
 
 
