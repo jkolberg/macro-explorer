@@ -110,14 +110,16 @@ ces_us_file: ces_usa.xlsx
 
 remi_components_dir: J:/Projects/Forecasts/_Regional/2026/REMI/Components
 remi_components_files:
-  - name: Low
+  - name: 1. REMI Low
     filename: REMI_v3.4_Low.xlsx
-  - name: High
+  - name: 3. REMI High
     filename: REMI_v3.4_High.xlsx
-  - name: v.3.4
+  - name: 2. REMI Medium
     filename: REMI_v3.4.xlsx
-  - name: Zero_Intl_Mig
+  - name: 4. Zero_Intl_Mig
     filename: REMI_v3.4_Zero_Intl.xlsx
+
+ofm_components_file: ofm_april1_components_of_change_1960_to_present.xlsx
 
 steps:
   # - macro_explorer.steps.get_decennial_data

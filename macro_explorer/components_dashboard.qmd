@@ -20,6 +20,7 @@ format:
 ```{python}
 #| output: false
 import os
+import re
 
 import pandas as pd
 import yaml
@@ -27,12 +28,21 @@ import yaml
 cfg = yaml.safe_load(open("configs/settings.yaml"))
 
 components_dir = cfg["remi_components_dir"]
-remi_base_year = cfg["remi_base_year"]
-county_map = cfg["county_map"]  # county name -> id
+data_dir = cfg["data_dir"]
+county_map = cfg["county_map"]  # "King County" -> id
+bare_county_map = {name.replace(" County", ""): name for name in county_map}  # "King" -> "King County"
 
 COMPONENT_LABELS = {
     "Total Migrants - All Races": "Migration",
     "Natural Growth - All Races": "Natural Increase",
+}
+
+# OFM sheet name -> component label; column headers span an April-to-April
+# period (e.g. "1960-1961") and some Jurisdiction values carry footnote marks,
+# so counties are matched on the plain "County" column instead.
+OFM_SHEETS = {
+    "Residual Net Migration": "Migration",
+    "Natural Change": "Natural Increase",
 }
 
 
@@ -57,6 +67,25 @@ def load_remi_components(file_path):
     return long
 
 
+def load_ofm_components(file_path):
+    """Read the OFM components-of-change workbook's Natural Change and Residual
+    Net Migration sheets by county into a long [region, component, year, value]
+    frame, attributing each April-to-April period to its ending year to match
+    the population estimate it feeds into."""
+    frames = []
+    for sheet_name, component in OFM_SHEETS.items():
+        df = pd.read_excel(file_path, sheet_name=sheet_name, skiprows=3)
+        df["region"] = df["County"].map(bare_county_map)
+        df = df.loc[df["region"].notna()].copy()
+
+        year_cols = [c for c in df.columns if re.search(r"\d{4}-\d{4}$", str(c))]
+        long = df.melt(id_vars="region", value_vars=year_cols, var_name="period", value_name="value")
+        long["year"] = long["period"].str.extract(r"(\d{4})$").astype(int)
+        long["component"] = component
+        frames.append(long[["region", "component", "year", "value"]])
+    return pd.concat(frames, ignore_index=True)
+
+
 comp_frames = []
 for comp_file in cfg["remi_components_files"]:
     file_path = os.path.join(components_dir, comp_file["filename"])
@@ -65,24 +94,28 @@ for comp_file in cfg["remi_components_files"]:
     comp_frames.append(df)
 components = pd.concat(comp_frames, ignore_index=True)
 
+ofm_components = load_ofm_components(os.path.join(data_dir, cfg["ofm_components_file"]))
+
 # "Region" is the sum of the four counties, computed here rather than relying on a workbook total row.
 region_totals = components.groupby(["name", "component", "year"], as_index=False)["value"].sum()
 region_totals["region"] = "Region"
 components = pd.concat([components, region_totals], ignore_index=True)
 
+ofm_region_totals = ofm_components.groupby(["component", "year"], as_index=False)["value"].sum()
+ofm_region_totals["region"] = "Region"
+ofm_components = pd.concat([ofm_components, ofm_region_totals], ignore_index=True)
+
 scenario_names = [comp_file["name"] for comp_file in cfg["remi_components_files"]]
 
-# History is identical across scenario files through remi_base_year, so keep
-# a single historical series and one forecast series per scenario.
-comp_hist = (
-    components.loc[components["year"] <= remi_base_year]
-    .drop_duplicates(["region", "component", "year"])[["region", "component", "year", "value"]]
-    .assign(name="History")
-)
-comp_forecast = components.loc[components["year"] > remi_base_year]
+# OFM is the historical source of truth for every year it covers (from 1990 on);
+# REMI scenario years that overlap with OFM history are dropped in favor of the OFM values.
+history_min_year = 1990
+comp_hist = ofm_components.loc[ofm_components["year"] >= history_min_year].assign(name="History")
+history_max_year = int(comp_hist["year"].max())
+comp_forecast = components.loc[components["year"] > history_max_year]
 comp_all = pd.concat([comp_hist, comp_forecast], ignore_index=True)
 
-# Average annual values by period for the combined region, split at remi_base_year like the plot above.
+# Average annual values by period for the combined region, split near history_max_year like the plot above.
 periods = [
     ("2000s", 2001, 2009),
     ("2010s", 2010, 2019),
@@ -107,7 +140,7 @@ def period_avg_table(component):
 migration_avg_table = period_avg_table("Migration")
 natural_increase_avg_table = period_avg_table("Natural Increase")
 
-ojs_define(data=comp_all, base_year=remi_base_year)
+ojs_define(data=comp_all, base_year=history_max_year)
 ```
 
 # Dashboard
@@ -183,7 +216,7 @@ xTicks = d3.range(Math.ceil(yearFrom / xTickStep) * xTickStep, yearTo + 1, xTick
 ## Column
 
 ```{ojs}
-//| title: REMI migration and natural increase - history and forecast scenarios
+//| title: Migration and natural increase - OFM history and REMI forecast scenarios
 Plot.plot({
   marginLeft: 60,
   marginRight: 20,
@@ -216,7 +249,7 @@ natural_increase_avg_table.style.format("{:,.0f}", na_rep="")
 
 # Notes
 
-- **History**: historical values input to the REMI economic model, identical across all scenarios through `{python} remi_base_year`.
+- **History**: OFM postcensal estimates of natural change and net migration, identical across all scenarios through `{python} history_max_year`.
 - **Migration**: net migrants (in-migration minus out-migration).
 - **Natural Increase**: births minus deaths.
 - **Region**: sum of King, Kitsap, Pierce, and Snohomish counties; individual counties can also be selected from the sidebar.
