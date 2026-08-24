@@ -78,9 +78,9 @@ def load_ofm_components(file_path):
         df["region"] = df["County"].map(bare_county_map)
         df = df.loc[df["region"].notna()].copy()
 
-        year_cols = [c for c in df.columns if re.search(r"\d{4}-\d{4}$", str(c))]
+        year_cols = [c for c in df.columns if re.search(r"\d{4}-\d{4}", str(c))]
         long = df.melt(id_vars="region", value_vars=year_cols, var_name="period", value_name="value")
-        long["year"] = long["period"].str.extract(r"(\d{4})$").astype(int)
+        long["year"] = long["period"].str.extract(r"\d{4}-(\d{4})").astype(int)
         long["component"] = component
         frames.append(long[["region", "component", "year", "value"]])
     return pd.concat(frames, ignore_index=True)
