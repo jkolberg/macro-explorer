@@ -115,25 +115,27 @@ history_max_year = int(comp_hist["year"].max())
 comp_forecast = components.loc[components["year"] > history_max_year]
 comp_all = pd.concat([comp_hist, comp_forecast], ignore_index=True)
 
-# Average annual values by period for the combined region, split near history_max_year like the plot above.
+# Average annual values by period for the combined region, split at history_max_year like the plot above.
+# The "2020s" bucket runs through 2029 (not just to history_max_year) so it reflects the full decade;
+# History naturally has no rows past history_max_year, so it drops out of later buckets on its own.
 periods = [
     ("2000s", 2001, 2009),
     ("2010s", 2010, 2019),
-    ("2020s", 2020, 2024),
-    ("2025-2039", 2025, 2039),
+    ("2020s", 2020, 2029),
+    (f"{history_max_year + 1}-2039", history_max_year + 1, 2039),
     ("2040-2060", 2040, 2060),
 ]
 
 
 def period_avg_table(component):
     subset = comp_all.loc[(comp_all["region"] == "Region") & (comp_all["component"] == component)]
-    avgs = []
-    for label, start, end in periods:
-        period_avg = subset.loc[(subset["year"] >= start) & (subset["year"] <= end)].groupby("name")["value"].mean()
-        if label == "2025-2039":
-            # This period is mostly forecast years; History only partially overlaps it, so drop that misleading partial average.
-            period_avg = period_avg.drop("History", errors="ignore")
-        avgs.append(period_avg.rename(label))
+    avgs = [
+        subset.loc[(subset["year"] >= start) & (subset["year"] <= end)]
+        .groupby("name")["value"]
+        .mean()
+        .rename(label)
+        for label, start, end in periods
+    ]
     return pd.concat(avgs, axis=1).T[["History"] + scenario_names]
 
 
