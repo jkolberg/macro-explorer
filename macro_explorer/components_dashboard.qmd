@@ -119,6 +119,7 @@ comp_all = pd.concat([comp_hist, comp_forecast], ignore_index=True)
 # The "2020s" bucket runs through 2029 (not just to history_max_year) so it reflects the full decade;
 # History naturally has no rows past history_max_year, so it drops out of later buckets on its own.
 periods = [
+    ("1990s", 1990, 1999),
     ("2000s", 2001, 2009),
     ("2010s", 2010, 2019),
     ("2020s", 2020, 2029),
