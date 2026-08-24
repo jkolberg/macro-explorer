@@ -156,7 +156,7 @@ viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 5, va
 ```
 
 ```{ojs}
-viewof selectedScenario = Inputs.radio(scenarioNames, {label: "Scenario", value: scenarioNames.includes("Medium") ? "Medium" : scenarioNames[0]})
+viewof selectedScenario = Inputs.radio(scenarioNames, {label: "Scenario", value: scenarioNames.includes("REMI Medium") ? "REMI Medium" : scenarioNames[0]})
 ```
 
 ```{ojs}
@@ -254,9 +254,9 @@ natural_increase_avg_table.style.format("{:,.0f}", na_rep="")
 - **Natural Increase**: births minus deaths.
 - **Region**: sum of King, Kitsap, Pierce, and Snohomish counties; individual counties can also be selected from the sidebar.
 - Scenario forecasts:
-  - **v.3.4**: Default REMI forecast released August 2026
-  - **Low**: Uses the "Census Low" international migration scenario
-  - **High** Uses the "Census High" international migration scenario
+  - **REMI Medium**: Default REMI forecast released August 2026
+  - **REMI Low**: Uses the "Census Low" international migration scenario
+  - **REMI High**: Uses the "Census High" international migration scenario
   - **Zero_Intl_Mig**: Assumes zero international migration
 
 # Links
