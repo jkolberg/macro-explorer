@@ -156,7 +156,7 @@ viewof yearTo = Inputs.range([minYear, maxYear], {label: "End Year", step: 5, va
 ```
 
 ```{ojs}
-viewof selectedScenario = Inputs.radio(scenarioNames, {label: "Scenario", value: scenarioNames.includes("v.3.4") ? "v.3.4" : scenarioNames[0]})
+viewof selectedScenario = Inputs.radio(scenarioNames, {label: "Scenario", value: scenarioNames.includes("Medium") ? "Medium" : scenarioNames[0]})
 ```
 
 ```{ojs}
