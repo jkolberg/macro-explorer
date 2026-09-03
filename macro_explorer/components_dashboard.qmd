@@ -143,10 +143,10 @@ def period_avg_table(component):
 migration_avg_table = period_avg_table("Migration")
 natural_increase_avg_table = period_avg_table("Natural Increase")
 
-# Chart shows a trailing 5-year rolling average per series; period tables above use the unsmoothed annual values.
+# Chart shows a trailing 3-year rolling average per series; period tables above use the unsmoothed annual values.
 comp_chart = comp_all.sort_values(["region", "component", "name", "year"]).copy()
 comp_chart["value"] = comp_chart.groupby(["region", "component", "name"])["value"].transform(
-    lambda s: s.rolling(5, min_periods=1).mean()
+    lambda s: s.rolling(3, min_periods=1).mean()
 )
 
 ojs_define(data=comp_chart, base_year=history_max_year)
