@@ -116,13 +116,13 @@ comp_forecast = components.loc[components["year"] > history_max_year]
 comp_all = pd.concat([comp_hist, comp_forecast], ignore_index=True)
 
 # Average annual values by period for the combined region, split at history_max_year like the plot above.
-# The "2020s" bucket runs through 2029 (not just to history_max_year) so it reflects the full decade;
-# History naturally has no rows past history_max_year, so it drops out of later buckets on its own.
+# The 2020s decade is split into a History-only period and a forecast-only period so neither column
+# blends partial-decade data across the history/forecast boundary.
 periods = [
     ("1990s", 1990, 1999),
     ("2000s", 2001, 2009),
     ("2010s", 2010, 2019),
-    ("2020s", 2020, 2029),
+    (f"2020-{history_max_year}", 2020, history_max_year),
     (f"{history_max_year + 1}-2039", history_max_year + 1, 2039),
     ("2040-2060", 2040, 2060),
 ]
@@ -143,7 +143,13 @@ def period_avg_table(component):
 migration_avg_table = period_avg_table("Migration")
 natural_increase_avg_table = period_avg_table("Natural Increase")
 
-ojs_define(data=comp_all, base_year=history_max_year)
+# Chart shows a trailing 5-year rolling average per series; period tables above use the unsmoothed annual values.
+comp_chart = comp_all.sort_values(["region", "component", "name", "year"]).copy()
+comp_chart["value"] = comp_chart.groupby(["region", "component", "name"])["value"].transform(
+    lambda s: s.rolling(5, min_periods=1).mean()
+)
+
+ojs_define(data=comp_chart, base_year=history_max_year)
 ```
 
 # Dashboard
